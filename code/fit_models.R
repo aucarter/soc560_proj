@@ -9,13 +9,13 @@
 
 ### Setup
 rm(list=ls())
-windows <- Sys.info()[1]=="Windows"
+user <- Sys.getenv("USERNAME")
 
 ## Packages
 library(data.table);library(ggplot2);library(lme4)
 
 ### Paths
-root <- ifelse(windows,"C:/Users/aucarter/Repos/soc560_proj/","")
+root <- ifelse(user == "aucarter","C:/Users/aucarter/Repos/soc560_proj/","")
 code.dir <- paste0(root, "code/")
 data.dir <- paste0(root, "data/")
 output.dir <- paste0(root, "")
@@ -37,7 +37,7 @@ comp.models <- function(models) {
 
 ### Code
 ## Read in and prep data
-dt <- fread(paste0(data.dir, "full_data_long.csv"))
+dt <- fread(paste0(data.dir, "full_data_wide.csv"))
 
 ## Summarize data
 state.means <- dt[, lapply(.SD, mean), by = .(STATEFP10), .SDcols = c("emissions", "POVRAT")]
