@@ -15,7 +15,7 @@ user <- Sys.getenv("USERNAME")
 library(data.table);library(ggplot2);library(lme4)
 
 ### Paths
-root <- ifelse(user == "aucarter","C:/Users/aucarter/Repos/soc560_proj/","")
+root <- ifelse(user == "aucarter","C:/Users/aucarter/Repos/soc560_proj/", "~/Desktop/University of Washington/Coursework/Winter 2017/SOC 560 Hierarchical Modeling for the Social Sciences/Project/soc560_proj/")
 code.dir <- paste0(root, "code/")
 data.dir <- paste0(root, "data/")
 output.dir <- paste0(root, "")
