@@ -62,6 +62,24 @@ dt_change1 <- dt_change1 %>%
          avg_manuf = (prop_manuf_90 + prop_manuf_00)/2,
          avg_pop_density = (pop_density_90 + pop_density_00)/2)
 
+dt_change2 <- dt_change2 %>%
+  mutate(avg_white = (SHRNHW0 + SHRNHW1)/2,
+         avg_black = (SHRNHB0 + SHRNHB1)/2, 
+         avg_hispanic = (SHRHSP0 + SHRHSP1)/2,
+         avg_other = (prop_other_race_all_00 + prop_other_race_all_10)/2,
+         avg_povrat = (POVRAT0 + POVRAT1A)/2,
+         avg_income = (MDFAMY0 + MDFAMY1A)/2, 
+         avg_hs_educ = ((EDUC120/EDUCPP0) + (EDUC121A/EDUCPP1A))/2,
+         avg_col_educ = ((EDUC160/EDUCPP0) + (EDUC161A/EDUCPP1A))/2,
+         avg_PC1 = (PC1_2000 + PC1_2010)/2, 
+         avg_PC2 = (PC2_2000 + PC2_2010)/2, 
+         avg_PC3 = (PC3_2000 + PC3_2010)/2, 
+         avg_log_PC1 = (Log_PC1_2000 + Log_PC1_2010)/2, 
+         avg_log_PC2 = (Log_PC2_2000 + Log_PC2_2010)/2, 
+         avg_log_PC3 = (Log_PC3_2000 + Log_PC3_2010)/2, 
+         avg_manuf = (prop_manuf_00 + prop_manuf_10)/2,
+         avg_pop_density = (pop_density_00 + pop_density_10)/2)
+
 
 
 ## Summarize data
@@ -99,7 +117,7 @@ for (j in 1:nstate) {
 }
 abline (h=0,col="red")
 text(46.5, -10000, labels = "IN, TN, RI", col = "blue")
-text(5, 3000, labels = "DC, NV, VT", col = "blue")
+text(3, 3000, labels = "DC, NV, VT", col = "blue")
 
 # 2000
 nj <- tapply(state.means.2000$emissions_mean, state.means.2000$STATEFP10, length)
@@ -173,7 +191,7 @@ plot (1:nstate, change2$Change[order(change2$Change)], pch=19,ylim=c(ymin,ymax),
       xlab="State rank by raw change in mean emmissions between 2000 and 2010", ylab="Change in Emissions", 
       main = "Ordered State Emmissions Change (2000 - 2010)")
 abline (h=0,col="red")
-text(46.5, 51, labels = "ND, WY, MT", col = "blue")
+text(46.5, 15, labels = "ND, WY, MT", col = "blue")
 text(4, -294, labels = "NJ, VA, DE", col = "blue")
 
 # 1990 - 2010
@@ -227,7 +245,7 @@ text(4, -250, labels = "RI, TN, IN", col = "blue")
 
 
 
-## Fit models
+## Fit models for change 1990 - 2000
 M1 <- lmer(emissions_decrease ~ emissions_1990 + avg_black + avg_hispanic + avg_other + 
              (1 | TRACTCE10), REML = F, data = dt_change1)
 M2 <- lmer(emissions_decrease ~ emissions_1990 + avg_black + avg_hispanic + avg_other + 
@@ -274,16 +292,83 @@ M14 <- lmer(emissions_decrease ~ emissions_1990 + avg_black + avg_hispanic + avg
               black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
               avg_povrat + avg_manuf + avg_pop_density + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 + 
               (1 | STATEFP10/TRACTCE10), REML = F, data = dt_change1)
-summary(M11)
-
-
-model.list <- c("M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9", "M10", "M11", "M12", "M13", "M14")
+M15 <- lmer(emissions_decrease ~ emissions_1990 + avg_black + avg_hispanic + avg_other + 
+              black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
+              avg_povrat + avg_manuf + avg_pop_density + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 + 
+              (1 | STATEFP10:TRACTCE10), REML = F, data = dt_change1)
+model.list <- c("M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", 
+                "M9", "M10", "M11", "M12", "M13", "M14", "M15")
 comp.models(model.list)
 
-summary(M11)
+# Model 11 seems to be the best out of the above for 1990 to 2000
 
 
+## Fit models for change 2000 - 2010
+M1 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
+             (1 | TRACTCE10), REML = F, data = dt_change2)
+M2 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
+             black_change + latino_change + other_change + (1 | TRACTCE10), REML = F, data = dt_change2)
+M3 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
+             black_change + latino_change + other_change + avg_income + 
+             (1 | TRACTCE10), REML = F, data = dt_change2)
+M4 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
+             black_change + latino_change + other_change + avg_hs_educ + avg_col_educ + 
+             (1 | TRACTCE10), REML = F, data = dt_change2)
+M5 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
+             black_change + latino_change + other_change + avg_income + avg_hs_educ + avg_col_educ + 
+             (1 | TRACTCE10), REML = F, data = dt_change2)
+M6 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
+             black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
+             avg_povrat + (1 | TRACTCE10), REML = F, data = dt_change2)
+M7 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
+             black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
+             avg_povrat + avg_manuf + (1 | TRACTCE10), REML = F, data = dt_change2)
+M8 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
+             black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
+             avg_povrat + avg_manuf + avg_pop_density + (1 | TRACTCE10), REML = F, data = dt_change2)
+M9 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
+             black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
+             avg_povrat + avg_manuf + avg_pop_density + avg_PC1 + avg_PC2 + avg_PC3 + 
+             (1 | TRACTCE10), REML = F, data = dt_change2)
+M10 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
+              black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
+              avg_povrat + avg_manuf + avg_pop_density + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 + 
+              (1 | TRACTCE10), REML = F, data = dt_change2)
+M11 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
+              black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
+              avg_povrat + avg_manuf + avg_pop_density + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 + 
+              (1 | TRACTCE10) + (1 | STATEFP10), REML = F, data = dt_change2)
+M12 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
+              black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
+              avg_povrat + avg_manuf + avg_pop_density + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 + 
+              (1 | TRACTCE10) + (1 + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 | STATEFP10), REML = F, data = dt_change2)
+M13 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
+              black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
+              avg_povrat + avg_manuf + avg_pop_density + (1 | TRACTCE10) +
+              (1 | STATEFP10), REML = F, data = dt_change2)
+M14 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
+              black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
+              avg_povrat + avg_manuf + avg_pop_density + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 + 
+              (1 | STATEFP10/TRACTCE10), REML = F, data = dt_change2)
+M15 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
+              black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
+              avg_povrat + avg_manuf + avg_pop_density + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 + 
+              (1 | STATEFP10:TRACTCE10), REML = F, data = dt_change2)
+M16 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
+              black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
+              avg_povrat + avg_manuf + avg_pop_density + avg_PC1 + avg_PC2 + avg_PC3 + 
+              (1 | TRACTCE10) + (1 | STATEFP10), REML = F, data = dt_change2)
+M17 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
+              black_change + latino_change + other_change  + avg_income + 
+              avg_hs_educ + avg_col_educ + avg_povrat + avg_manuf + avg_pop_density + 
+              (1 | TRACTCE10) + (1 | STATEFP10), REML = F, data = dt_change2)
 
+model.list <- c("M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", 
+                "M9", "M10", "M11", "M12", "M13", "M14", "M15",
+                "M16", "M17")
+comp.models(model.list)
+
+# Model 13 seems to be the best out of the above for 2000 to 2010
 
 
 ### End
