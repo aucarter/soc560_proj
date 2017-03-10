@@ -1,0 +1,74 @@
+---
+title: "Cross_sec Models"
+author: "Victoria Sass"
+date: "3/9/2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+\begin{table}
+\begin{center}
+\begin{tabular}{l c c}
+\hline
+ & Model 1 \\
+\hline
+(Intercept)                     & $336.82^{**}$    & $(120.79)$ \\
+                                       \\
+SHRNHB                          & $560.54^{***}$   & $(154.00)$\\
+                                       \\
+Log\_PC1                        & $19.75$          & $(31.44)$\\
+                                \\
+SHRHSP                          & $3227.47^{***}$  & $(299.54)$\\
+                                       \\
+prop\_other\_race\_all          & $1566.36^{**}$   & $(543.80)$\\
+                                       \\
+Log\_PC2                        & $-56.41$         & $(49.86)$\\
+                                        \\
+Log\_PC3                        & $-27.84$         & $(51.41)$\\
+                                        \\
+MDFAMY                          & $-0.00^{*}$      & $(0.00)$\\
+                                         \\
+hs\_educ                        & $-1504.08^{***}$ & $(190.93)$\\
+                                       \\
+col\_educ                       & $-564.20^{***}$  & $(148.47)$\\
+                                       \\
+POVRAT                          & $1198.52^{***}$  & $(139.10)$\\
+                                       \\
+prop\_manuf                     & $2053.27^{***}$  & $(134.57)$\\
+                                       \\
+pop\_density                    & $-4921.70$       & $(3161.96)$\\
+                                      \\
+SHRNHB:Log\_PC1                 & $168.27^{**}$    & $(57.72)$\\
+                                      \\
+Log\_PC1:SHRHSP                 & $1316.39^{***}$  & $(109.27)$\\
+                                       \\
+Log\_PC1:prop\_other\_race\_all & $764.30^{***}$   & $(209.68)$\\
+                                       \\
+SHRNHB:Log\_PC2                 & $269.79^{**}$    & $(85.91)$\\
+                                        \\
+SHRHSP:Log\_PC2                 & $963.53^{***}$   & $(209.30)$\\
+                                       \\
+prop\_other\_race\_all:Log\_PC2 & $208.98$         & $(364.72)$\\
+                                       \\
+SHRNHB:Log\_PC3                 & $4.56$           & $(89.77)$\\
+                                        \\
+SHRHSP:Log\_PC3                 & $-323.97^{*}$    & $(154.58)$\\
+                                       \\
+prop\_other\_race\_all:Log\_PC3 & $-581.80$        & $(320.34)$\\
+                                       \\
+\hline
+AIC                             & 1341759.65       \\
+BIC                             & 1341980.09       \\
+Log Likelihood                  & -670855.82       \\
+Num. obs.                       & 72049            \\
+Num. groups: STUSAB             & 48               \\
+Var: STUSAB (Intercept)         & 38321.18         \\
+Var: Residual                   & 7153210.02       \\
+\hline
+\multicolumn{2}{l}{\scriptsize{$^{***}p<0.001$, $^{**}p<0.01$, $^*p<0.05$}}
+\end{tabular}
+\caption{1990}
+\label{table:coefficients}
+\end{center}
+\end{table}

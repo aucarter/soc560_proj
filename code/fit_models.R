@@ -10,6 +10,7 @@
 ### Setup
 rm(list=ls())
 user <- Sys.getenv("USERNAME")
+options(scipen = 999)
 
 ## Packages
 library(data.table);library(ggplot2);library(lme4);library(dplyr)
@@ -81,16 +82,37 @@ dt_change2 <- dt_change2 %>%
          avg_pop_density = (pop_density_00 + pop_density_10)/2)
 
 dt1990 <- dt1990 %>%
-  mutate(hs_educ = EDUC12/EDUCPP,
-         col_educ = EDUC16/EDUCPP)
+  mutate(hs_educ = ifelse(EDUCPP > 0, EDUC12/EDUCPP, 0),
+         col_educ = ifelse(EDUCPP > 0, EDUC16/EDUCPP, 0),
+         race_total = SHRNHW + SHRNHB + SHRHSP + prop_other_race_all, 
+         SHRNHW = ifelse(race_total > 0, SHRNHW/race_total, 0),
+         SHRNHB = ifelse(race_total > 0 ,SHRNHB/race_total, 0),
+         SHRHSP = ifelse(race_total > 0, SHRHSP/race_total, 0),
+         prop_other_race_all = ifelse(race_total > 0, 
+                                      prop_other_race_all/race_total,
+                                      0))
 
 dt2000 <- dt2000 %>%
-  mutate(hs_educ = EDUC12/EDUCPP,
-         col_educ = EDUC16/EDUCPP)
+  mutate(hs_educ = ifelse(EDUCPP > 0, EDUC12/EDUCPP, 0),
+         col_educ = ifelse(EDUCPP > 0, EDUC16/EDUCPP, 0),
+         race_total = SHRNHW + SHRNHB + SHRHSP + prop_other_race_all, 
+         SHRNHW = ifelse(race_total > 0, SHRNHW/race_total, 0),
+         SHRNHB = ifelse(race_total > 0 ,SHRNHB/race_total, 0),
+         SHRHSP = ifelse(race_total > 0, SHRHSP/race_total, 0),
+         prop_other_race_all = ifelse(race_total > 0, 
+                                      prop_other_race_all/race_total,
+                                      0))
 
 dt2010 <- dt2010 %>%
-  mutate(hs_educ = EDUC12/EDUCPP,
-         col_educ = EDUC16/EDUCPP)
+  mutate(hs_educ = ifelse(EDUCPP > 0, EDUC12/EDUCPP, 0),
+         col_educ = ifelse(EDUCPP > 0, EDUC16/EDUCPP, 0),
+         race_total = SHRNHW + SHRNHB + SHRHSP + prop_other_race_all, 
+         SHRNHW = ifelse(race_total > 0, SHRNHW/race_total, 0),
+         SHRNHB = ifelse(race_total > 0 ,SHRNHB/race_total, 0),
+         SHRHSP = ifelse(race_total > 0, SHRHSP/race_total, 0),
+         prop_other_race_all = ifelse(race_total > 0, 
+                                      prop_other_race_all/race_total,
+                                      0))
 
 ## Summarize data
 state.means.1990 <- dt1990 %>% group_by(STATEFP10) %>% summarize_all(funs(mean, sd))
@@ -298,7 +320,6 @@ M13 <- lmer(emissions_decrease ~ emissions_1990 + avg_black + avg_hispanic + avg
               black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
               avg_povrat + avg_manuf + avg_pop_density +
                (1 | STATEFP10), REML = F, data = dt_change1)
-<<<<<<< HEAD
 M14 <- lmer(emissions_decrease ~ emissions_1990 + avg_black + avg_hispanic + avg_other + 
               black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
               avg_povrat + avg_manuf + avg_pop_density + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 + 
@@ -321,7 +342,6 @@ model.list <- c("M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8",
 =======
 model.list <- c("M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", 
                 "M9", "M10","M12", "M13")
->>>>>>> 7aa1aa134f718ae2bf0c602d43b1461ed5109d93
 comp.models(model.list)
 
 # Model 11 seems to be the best out of the above for 1990 to 2000
@@ -391,44 +411,201 @@ comp.models(model.list)
 ### Cross sectional models ###
 ##############################
 
+### 1990 ###
+
 M1 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all + 
-             (1 | TRACTCE10), REML = F, data = dt1990)
+             (1 | STATEFP10), REML = F, data = dt1990)
 M2 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + (1 | TRACTCE10), REML = F, data = dt1990)
+             MDFAMY + (1 | STATEFP10), REML = F, data = dt1990)
 M3 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + (1 | TRACTCE10), REML = F, data = dt1990)
+             MDFAMY + hs_educ + col_educ + (1 | STATEFP10), REML = F, data = dt1990)
 M4 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + POVRAT + (1 | TRACTCE10), REML = F, data = dt1990)
+             MDFAMY + hs_educ + col_educ + POVRAT + (1 | STATEFP10), REML = F, data = dt1990)
 M5 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
              MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + 
-             (1 | TRACTCE10), REML = F, data = dt1990)
+             (1 | STATEFP10), REML = F, data = dt1990)
 M6 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
              MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
-             (1 | TRACTCE10), REML = F, data = dt1990)
+             (1 | STATEFP10), REML = F, data = dt1990)
 M7 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
              MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
-             
-             (1 | TRACTCE10), REML = F, data = dt1990)
+             PC1 + PC2 + PC3 + (1 | STATEFP10), REML = F, data = dt1990)
+M8 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
+             PC1 + PC2 + PC3 + (1 + PC1 + PC2 + PC3 | STATEFP10), REML = F, data = dt1990)
+M9 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
+             Log_PC1 + Log_PC2 + Log_PC3 + (1 | STATEFP10), REML = F, data = dt1990)
+M10 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
+             Log_PC1 + Log_PC2 + Log_PC3 + (1 + Log_PC1 + Log_PC2 + Log_PC3| STATEFP10), 
+            REML = F, data = dt1990)
+M11 <- lmer(emissions ~ SHRNHB*Log_PC1 + SHRHSP*Log_PC1 + prop_other_race_all*Log_PC1 + 
+              SHRNHB*Log_PC2 + SHRHSP*Log_PC2 + prop_other_race_all*Log_PC2 + 
+              SHRNHB*Log_PC3 + SHRHSP*Log_PC3 + prop_other_race_all*Log_PC3 +
+             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
+               (1 | STUSAB), REML = F, data = dt1990)
+model.list <- c("M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", 
+                "M9", "M10", "M11")
+comp.models(model.list)
+
+# Model 11 seems to be the best for 1990
+summary(M11)
+
+# Visualizing the state random effects for the best fitting model 
+lattice::dotplot(ranef(M11, condVar = TRUE))
+
+### 2000 ###
+M1 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all + 
+             (1 | STATEFP10), REML = F, data = dt2000)
+M2 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+             MDFAMY + (1 | STATEFP10), REML = F, data = dt2000)
+M3 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+             MDFAMY + hs_educ + col_educ + (1 | STATEFP10), REML = F, data = dt2000)
+M4 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+             MDFAMY + hs_educ + col_educ + POVRAT + (1 | STATEFP10), REML = F, data = dt2000)
+M5 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + 
+             (1 | STATEFP10), REML = F, data = dt2000)
+M6 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
+             (1 | STATEFP10), REML = F, data = dt2000)
+M7 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
+             PC1 + PC2 + PC3 + (1 | STATEFP10), REML = F, data = dt2000)
+M8 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
+             PC1 + PC2 + PC3 + (1 + PC1 + PC2 + PC3 | STATEFP10), REML = F, data = dt2000)
+M9 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
+             Log_PC1 + Log_PC2 + Log_PC3 + (1 | STATEFP10), REML = F, data = dt2000)
+M10 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+              MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
+              Log_PC1 + Log_PC2 + Log_PC3 + (1 + Log_PC1 + Log_PC2 + Log_PC3| STATEFP10), 
+            REML = F, data = dt2000)
+M11 <- lmer(emissions ~ SHRNHB*Log_PC1 + SHRHSP*Log_PC1 + prop_other_race_all*Log_PC1 + 
+              SHRNHB*Log_PC2 + SHRHSP*Log_PC2 + prop_other_race_all*Log_PC2 + 
+              SHRNHB*Log_PC3 + SHRHSP*Log_PC3 + prop_other_race_all*Log_PC3 +
+              MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
+              (1 | STUSAB), REML = F, data = dt2000)
+M12 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+               hs_educ + col_educ + POVRAT + prop_manuf + 
+              (1 | STUSAB), REML = F, data = dt2000)
+
+model.list <- c("M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", 
+                "M9", "M10", "M11", "M12")
+comp.models(model.list)
+
+# Model 12 seems to be the best for 2000
+summary(M12)
+
+# Visualizing the state random effects for the best fitting model 
+lattice::dotplot(ranef(M12, condVar = TRUE))
 
 
+### 2010 ###
+M1 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all + 
+             (1 | STATEFP10), REML = F, data = dt2010)
+M2 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+             MDFAMY + (1 | STATEFP10), REML = F, data = dt2010)
+M3 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+             MDFAMY + hs_educ + col_educ + (1 | STATEFP10), REML = F, data = dt2010)
+M4 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+             MDFAMY + hs_educ + col_educ + POVRAT + (1 | STUSAB), REML = F, data = dt2010)
+M5 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + 
+             (1 | STATEFP10), REML = F, data = dt2010)
+M6 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
+             (1 | STATEFP10), REML = F, data = dt2010)
+M7 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
+             PC1 + PC2 + PC3 + (1 | STATEFP10), REML = F, data = dt2010)
+M8 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
+             PC1 + PC2 + PC3 + (1 + PC1 + PC2 + PC3 | STATEFP10), REML = F, data = dt2010)
+M9 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
+             Log_PC1 + Log_PC2 + Log_PC3 + (1 | STATEFP10), REML = F, data = dt2010)
+M10 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+              MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
+              Log_PC1 + Log_PC2 + Log_PC3 + (1 + Log_PC1 + Log_PC2 + Log_PC3| STATEFP10), 
+            REML = F, data = dt2010)
+M11 <- lmer(emissions ~ SHRNHB*Log_PC1 + SHRHSP*Log_PC1 + prop_other_race_all*Log_PC1 + 
+              SHRNHB*Log_PC2 + SHRHSP*Log_PC2 + prop_other_race_all*Log_PC2 + 
+              SHRNHB*Log_PC3 + SHRHSP*Log_PC3 + prop_other_race_all*Log_PC3 +
+              MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
+              (1 | STUSAB), REML = F, data = dt2010)
+
+model.list <- c("M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", 
+                "M9", "M10", "M11")
+comp.models(model.list)
+
+# Model 4 seems to be the best for 2010
+summary(M4)
+
+# Visualizing the state random effects for the best fitting model 
+lattice::dotplot(ranef(M4, condVar = TRUE))
 
 
-M9 <- lmer(emissions ~ emissions_1990 + SHRNHB + SHRHSP + prop_other_race_all + 
-             black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
-             avg_povrat + avg_manuf + avg_pop_density + avg_PC1 + avg_PC2 + avg_PC3 + 
-             (1 | TRACTCE10), REML = F, data = dt1990)
-M10 <- lmer(emissions ~ emissions_1990 + SHRNHB + SHRHSP + prop_other_race_all + 
-              black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
-              avg_povrat + avg_manuf + avg_pop_density + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 + 
-              (1 | TRACTCE10), REML = F, data = dt1990)
-M11 <- lmer(emissions ~ emissions_1990 + SHRNHB + SHRHSP + prop_other_race_all + 
-              black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
-              avg_povrat + avg_manuf + avg_pop_density + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 + 
-              (1 | TRACTCE10) + (1 | STATEFP10), REML = F, data = dt1990)
-M12 <- lmer(emissions ~ emissions_1990 + SHRNHB + SHRHSP + prop_other_race_all + 
-              black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
-              avg_povrat + avg_manuf + avg_pop_density + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 + 
-              (1 | TRACTCE10) + (1 + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 | STATEFP10), REML = F, data = dt1990)
+### Year Comparisons ###
+# 1990 #
+M11_1 <- lmer(emissions ~ SHRNHB*Log_PC1 + SHRHSP*Log_PC1 + prop_other_race_all*Log_PC1 + 
+                SHRNHB*Log_PC2 + SHRHSP*Log_PC2 + prop_other_race_all*Log_PC2 + 
+                SHRNHB*Log_PC3 + SHRHSP*Log_PC3 + prop_other_race_all*Log_PC3 +
+                MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
+                (1 | STUSAB), REML = F, data = dt1990)
+M11_2 <- lmer(emissions ~ SHRNHB*Log_PC1 + SHRHSP*Log_PC1 + prop_other_race_all*Log_PC1 + 
+                SHRNHB*Log_PC2 + SHRHSP*Log_PC2 + prop_other_race_all*Log_PC2 + 
+                SHRNHB*Log_PC3 + SHRHSP*Log_PC3 + prop_other_race_all*Log_PC3 +
+                MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
+                (1 | STUSAB), REML = F, data = dt2000)
+M11_3 <- lmer(emissions ~ SHRNHB*Log_PC1 + SHRHSP*Log_PC1 + prop_other_race_all*Log_PC1 + 
+                SHRNHB*Log_PC2 + SHRHSP*Log_PC2 + prop_other_race_all*Log_PC2 + 
+                SHRNHB*Log_PC3 + SHRHSP*Log_PC3 + prop_other_race_all*Log_PC3 +
+                MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
+                (1 | STUSAB), REML = F, data = dt2010)
+summary(M11_1)
+summary(M11_2)
+summary(M11_3)
+lattice::dotplot(ranef(M11_1, condVar = TRUE))
+lattice::dotplot(ranef(M11_2, condVar = TRUE))
+lattice::dotplot(ranef(M11_3, condVar = TRUE))
+
+# 2000 #
+M12_1 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+              hs_educ + col_educ + POVRAT + prop_manuf + 
+              (1 | STUSAB), REML = F, data = dt1990)
+M12_2 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+              hs_educ + col_educ + POVRAT + prop_manuf + 
+              (1 | STUSAB), REML = F, data = dt2000)
+M12_3 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+              hs_educ + col_educ + POVRAT + prop_manuf + 
+              (1 | STUSAB), REML = F, data = dt2010)
+summary(M12_1)
+summary(M12_2)
+summary(M12_3)
+lattice::dotplot(ranef(M12_1, condVar = TRUE))
+lattice::dotplot(ranef(M12_2, condVar = TRUE))
+lattice::dotplot(ranef(M12_3, condVar = TRUE))
+
+# 2010 #
+M4_1 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+             MDFAMY + hs_educ + col_educ + POVRAT + (1 | STUSAB), 
+             REML = F, data = dt1990)
+M4_2 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+             MDFAMY + hs_educ + col_educ + POVRAT + (1 | STUSAB), 
+             REML = F, data = dt2000)
+M4_3 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+             MDFAMY + hs_educ + col_educ + POVRAT + (1 | STUSAB), 
+             REML = F, data = dt2010)
+summary(M4_1)
+summary(M4_2)
+summary(M4_3)
+lattice::dotplot(ranef(M4_1, condVar = TRUE))
+lattice::dotplot(ranef(M4_2, condVar = TRUE))
+lattice::dotplot(ranef(M4_3, condVar = TRUE))
+
 
 
 
