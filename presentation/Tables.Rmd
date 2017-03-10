@@ -1,0 +1,111 @@
+---
+title: "SOC 560 Project Tables"
+author: "Victoria Sass"
+date: "3/6/2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+## 1990 -2000
+
+
+\begin{table}
+\begin{center}
+\begin{tabular}{l c }
+\hline
+ & Model 1 \\
+\hline
+(Intercept)                & $508.36^{***}$  \\
+                           & $(57.07)$       \\
+emissions\_1990            & $0.77^{***}$    \\
+                           & $(0.00)$        \\
+avg\_black                 & $-21.21$        \\
+                           & $(26.08)$       \\
+avg\_hispanic              & $-49.13$        \\
+                           & $(38.87)$       \\
+avg\_other                 & $-412.48^{***}$ \\
+                           & $(65.45)$       \\
+black\_change              & $-231.02^{***}$ \\
+                           & $(66.36)$       \\
+latino\_change             & $32.88$         \\
+                           & $(72.10)$       \\
+other\_change              & $341.28^{***}$  \\
+                           & $(100.91)$      \\
+avg\_hs\_educ              & $-858.89^{***}$ \\
+                           & $(108.97)$      \\
+avg\_col\_educ             & $-458.14^{***}$ \\
+                           & $(67.49)$       \\
+avg\_povrat                & $-635.16^{***}$ \\
+                           & $(58.16)$       \\
+avg\_manuf                 & $-496.93^{***}$ \\
+                           & $(65.25)$       \\
+avg\_pop\_density          & $3130.10^{**}$  \\
+                           & $(1212.10)$     \\
+avg\_log\_PC1              & $-7.96$         \\
+                           & $(8.50)$        \\
+avg\_log\_PC2              & $25.65^{*}$     \\
+                           & $(13.03)$       \\
+avg\_log\_PC3              & $29.13$         \\
+                           & $(21.03)$       \\
+\hline
+AIC                        & 1210923.53      \\
+BIC                        & 1211088.78      \\
+Log Likelihood             & -605443.77      \\
+Num. obs.                  & 71722           \\
+Num. groups: STATEFP10     & 48              \\
+Var: STATEFP10 (Intercept) & 2830.65         \\
+Var: Residual              & 1257144.77      \\
+\hline
+\multicolumn{2}{l}{\scriptsize{$^{***}p<0.001$, $^{**}p<0.01$, $^*p<0.05$}}
+\end{tabular}
+\caption{1990 - 2000 Change}
+\label{table:coefficients}
+\end{center}
+\end{table}
+
+
+
+## 2000 - 2010 
+
+\begin{table}
+\begin{center}
+\begin{tabular}{l c }
+\hline
+ & Model 1 \\
+\hline
+(Intercept)                & $12.26$      \\
+                           & $(20.12)$    \\
+emissions\_2000            & $0.67^{***}$ \\
+                           & $(0.00)$     \\
+avg\_black                 & $-10.41$     \\
+                           & $(8.88)$     \\
+avg\_hispanic              & $-14.97$     \\
+                           & $(13.27)$    \\
+avg\_other                 & $32.19$      \\
+                           & $(22.71)$    \\
+black\_change              & $-51.56$     \\
+                           & $(29.68)$    \\
+latino\_change             & $-0.87$      \\
+                           & $(31.04)$    \\
+other\_change              & $6.85$       \\
+                           & $(53.93)$    \\
+avg\_hs\_educ              & $-79.26$     \\
+                           & $(41.72)$    \\
+avg\_col\_educ             & $9.99$       \\
+                           & $(24.76)$    \\
+\hline
+AIC                        & 1080483.34   \\
+BIC                        & 1080593.53   \\
+Log Likelihood             & -540229.67   \\
+Num. obs.                  & 71847        \\
+Num. groups: STATEFP10     & 49           \\
+Var: STATEFP10 (Intercept) & 714.48       \\
+Var: Residual              & 198668.92    \\
+\hline
+\multicolumn{2}{l}{\scriptsize{$^{***}p<0.001$, $^{**}p<0.01$, $^*p<0.05$}}
+\end{tabular}
+\caption{2000 - 2010 Change}
+\label{table:coefficients}
+\end{center}
+\end{table}
