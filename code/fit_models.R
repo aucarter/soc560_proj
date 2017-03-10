@@ -165,7 +165,9 @@ state.means.2010 <- dt2010 %>% group_by(STATEFP10) %>% summarize_all(funs(mean, 
 county.means.2010 <- dt2010 %>% group_by(COUNTYFP10) %>% summarize_all(funs(mean, sd))
 tract.means.2010 <- dt2010 %>% group_by(TRACTCE10) %>% summarize_all(funs(mean, sd))
 
-## Plotting the state-ordered emissions
+##############################################
+## Plotting the state-ordered raw emissions ##
+##############################################
 
 # 1990
 nj <- tapply(state.means.1990$emissions_mean, state.means.1990$STATEFP10, length)
@@ -231,7 +233,10 @@ abline (h=0,col="red")
 text(46.5, -3000, labels = "KY, WV, LA", col = "blue")
 text(4, 800, labels = "VT, DC, NM", col = "blue")
 
-# Plotting change in emmissions
+########################################################
+## Plotting the state-ordered change in raw emissions ##
+########################################################
+
 change1 <- cbind.data.frame(State = state.means.2000$STATEFP10, 
                             Emissions = state.means.1990$emissions_mean,
                             Change = state.means.2000$emissions_mean - state.means.1990$emissions_mean)
@@ -274,7 +279,10 @@ abline (h=0,col="red")
 text(46.5, -160, labels = "DC, MT, ND", col = "blue")
 text(4, -900, labels = "RI, TN, IN", col = "blue")
 
-# Plotting relative change
+#############################################################
+## Plotting the state-ordered change in relative emissions ##
+#############################################################
+
 overallmean1990 <- mean(state.means.1990$emissions_mean)
 overallmean2000 <- mean(state.means.2000$emissions_mean)
 overallmean2010 <- mean(state.means.2010$emissions_mean)
@@ -312,6 +320,101 @@ abline (h=0,col="red")
 text(46.5, -35, labels = "DC, MT, ND", col = "blue")
 text(4, -250, labels = "RI, TN, IN", col = "blue")
 
+################################################################
+## Plotting the state-ordered evaluation/compliance variables ##
+################################################################
+pca_vars <- dt_long %>%
+  group_by(STUSAB, time) %>%
+  summarise(log_PC1 = first(Log_PC1),
+            log_PC2 = first(Log_PC2),
+            log_PC3 = first(Log_PC3),
+            PC1 = first(PC1),
+            PC2 = first(PC2),
+            PC3 = first(PC3)) %>%
+  ungroup() %>%
+  mutate(STUSAB = as.character(STUSAB))
+pca_1990 <- pca_vars %>%
+  filter(time == 1990, !is.na(log_PC1))
+pca_2000 <- pca_vars %>%
+  filter(time == 2000)
+pca_2010 <- pca_vars %>%
+  filter(time == 2010)
+
+
+# Setup
+nj <- tapply(pca_2000$log_PC1, 
+             pca_2000$STUSAB, length)
+statemeans_PC1_1990 <- pca_1990$log_PC1
+statemeans_PC1_2000 <- pca_2000$log_PC1
+statemeans_PC1_2010 <- pca_2010$log_PC1
+statemeans_PC2_1990 <- pca_1990$log_PC2
+statemeans_PC2_2000 <- pca_2000$log_PC2
+statemeans_PC2_2010 <- pca_2010$log_PC2
+statemeans_PC3_1990 <- pca_1990$log_PC3
+statemeans_PC3_2000 <- pca_2000$log_PC3
+statemeans_PC3_2010 <- pca_2010$log_PC3
+nstate <- length(nj)
+ymax1 <- max (pca_2010$log_PC1)
+ymin1 <- min (pca_2000$log_PC1)
+ymax2 <- max (pca_2010$log_PC2)
+ymin2 <- min (pca_2000$log_PC2)
+ymax3 <- max (pca_1990$log_PC3)
+ymin3 <- min (pca_2000$log_PC3)
+mat <- matrix(c(1,2,3,4,5,6,7,8,9), 3)
+
+par(mfrow=c(3,3))
+layout(mat, c(2,2,2), c(2,2,2))
+# PCA 1
+plot (1:48, statemeans_PC1_1990[order(statemeans_PC1_1990)], 
+      pch=19,ylim=c(ymin1,ymax1), col = "red",
+      xlab="State rank in 1990", ylab = "",
+      main = "Ordered State Compliance Measure (PC1)")
+text(6, -1, labels = "ND, NV, VT", col = "red")
+text(43, 3, labels = "WI, OH, PA", col = "red")
+plot(1:nstate, statemeans_PC1_2000[order(statemeans_PC1_2000)],
+     xlab="State rank in 2000", ylab = "", pch=19, col = "blue", 
+     ylim=c(ymin1,ymax1))
+text(6, 0, labels = "DC, VT, ND", col = "blue")
+text(43, 4, labels = "CA, IN, PA", col = "blue")
+plot(1:nstate, statemeans_PC1_2010[order(statemeans_PC1_2010)], 
+     xlab="State rank in 2010", ylab = "", pch=19, col = "purple", 
+     ylim=c(ymin1,ymax1))
+text(6, 0.5, labels = "DC, VT, ND", col = "purple")
+text(43, 2, labels = "OH, CA, TX", col = "purple")
+# PCA 2
+plot (1:48, statemeans_PC2_1990[order(statemeans_PC2_1990)], 
+      pch=19,ylim=c(ymin2,ymax2), col = "red",
+      xlab="State rank in 1990", ylab = "",
+      main = "Ordered State Compliance Measure (PC2)")
+text(6, -1, labels = "GA, PA, NY", col = "red")
+text(43, 1.3, labels = "WI, NV, ND", col = "red")
+plot(1:nstate, statemeans_PC2_2000[order(statemeans_PC2_2000)],
+     xlab="State rank in 2000", ylab = "", pch=19, col = "blue", 
+     ylim=c(ymin2,ymax2))
+text(6, -.9, labels = "TX, GA, IL", col = "blue")
+text(43, 2.2, labels = "MN, WI, DC", col = "blue")
+plot(1:nstate, statemeans_PC2_2010[order(statemeans_PC2_2010)], 
+     xlab="State rank in 2010", ylab = "", pch=19, col = "purple", 
+     ylim=c(ymin2,ymax2))
+text(6, -1.5, labels = "NY, MA, WV", col = "purple")
+text(43, 1, labels = "WA, NE, NV", col = "purple")
+# PCA 3
+plot (1:48, statemeans_PC3_1990[order(statemeans_PC3_1990)], 
+      pch=19,ylim=c(ymin3,ymax3), col = "red",
+      xlab="State rank in 1990", ylab = "",
+      main = "Ordered State Compliance Measure (PC3)")
+text(6, -1, labels = "ID, WY, ND", col = "red")
+text(43, 0.5, labels = "TN, NC, TX", col = "red")
+plot(1:nstate, statemeans_PC3_2000[order(statemeans_PC3_2000)],
+     xlab="State rank in 2000", ylab = "", pch=19, col = "blue", 
+     ylim=c(ymin3,ymax3))
+text(6, -.8, labels = "UT, KY, DC", col = "blue")
+text(43, 1.2, labels = "OH, RI, AZ", col = "blue")
+plot(1:nstate, statemeans_PC3_2010[order(statemeans_PC3_2010)], 
+     xlab="State rank in 2010", ylab = "", pch=19, col = "purple", 
+     ylim=c(ymin3,ymax3))
+text(6, -1.6, labels = "DC, WY, NC", col = "purple")
+text(43, 1.4, labels = "GA, UT, MI", col = "purple")
 
 
 
