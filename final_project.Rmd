@@ -303,7 +303,7 @@ M7 <- lmer(emissions ~ Log_PC1*SHRNHW + Log_PC2*SHRNHW + Log_PC3*SHRNHW +
 
 # Hispanic and PCA interaction
 M8 <- lmer(emissions ~ Log_PC1*SHRHSP + Log_PC2*SHRHSP+ Log_PC3*SHRHSP +
-           hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990)
+           hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STUSAB), REML = F, data = dt1990)
 
 # Other and PCA interaction
 M9 <- lmer(emissions ~ Log_PC1*prop_other_race_all + Log_PC2*prop_other_race_all + Log_PC3*prop_other_race_all +
@@ -382,14 +382,14 @@ Wilson, William J. 1987. The Truly Disadvantaged: The Inner City, the Underclass
 
 ## Variable dictionary
 
-\begin{table}[]
+\begin{table}[htpb]
 \centering
 \caption{Change Models Variables}
 \label{my-label}
-\begin{tabular}{lc}
+\begin{tabular}{|l|c|}
 \cline{1-1}
 \multicolumn{1}{|c|}{\textbf{Name}} & \textbf{Description}                                                                                                                       \\ \cline{1-1}
-\multicolumn{2}{c}{\textit{Change Models}}                                                                                                                                       \\
+\multicolumn{2}{|c|}{\textit{Change Models}}                                                                                                                                       \\
 emissions                           & \multicolumn{1}{l}{Average tract-level emissions}                                                                                          \\
 SHRNHB                              & \begin{tabular}[c]{@{}c@{}}Proportion non-hispanic Black\\ living in tract\end{tabular}                                                    \\
 SHRHSP                              & \begin{tabular}[c]{@{}c@{}}Proportion Hispanic/Latinx \\ living in tract\end{tabular}                                                      \\
@@ -408,14 +408,14 @@ STUSAB                              & State Abbreviations
 \end{table}
 
 
-\begin{table}[]
+\begin{table}[htpb]
 \centering
 \caption{Cross-Sectional Models Variables}
 \label{my-label}
-\begin{tabular}{lc}
+\begin{tabular}{|l|c|}
 \cline{1-1}
 \multicolumn{1}{|c|}{\textbf{Name}} & \textbf{Description}                                                                                                                                                     \\ \cline{1-1}
-\multicolumn{2}{c}{\textit{Cross-sectional Models}}                                                                                                                                                            \\
+\multicolumn{2}{|c|}{\textit{Cross-sectional Models}}                                                                                                                                                            \\
 emissions\_decrease                 & \begin{tabular}[c]{@{}c@{}}The amount average tract-level\\ emissions decreased from \\ time1 to time2\end{tabular}                                                      \\
 emissions\_1990                     & \begin{tabular}[c]{@{}c@{}}Average tract-level emissions \\ in 1990\end{tabular}                                                                                         \\
 emissions\_2000                     & \begin{tabular}[c]{@{}c@{}}Average tract-level emissions \\ in 2000\end{tabular}                                                                                         \\
