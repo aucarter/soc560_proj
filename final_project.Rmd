@@ -1,0 +1,1105 @@
+---
+title: 'Neighborhood Dynamics and State Policy Variation: A spatio-temporal investigation of racial disparities in air pollution exposure'
+author: "Austin Carter and Victoria Sass"
+date: "March 13, 2017"
+output: pdf_document
+header-includes:
+- \usepackage{setspace}
+- \onehalfspacing
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r code, include = F}
+################################################################################
+## Purpose: Read in data and fit preliminary models
+## Date created: 
+## Date modified:
+## Author: Austin Carter (aucarter@uw.edu) & Victoria Sass
+## Run instructions: 
+## Notes:
+################################################################################
+
+### Setup
+rm(list=ls())
+user <- Sys.getenv("USERNAME")
+options(scipen = 999)
+
+## Packages
+library(data.table);library(ggplot2);library(lme4);library(dplyr);library(BMA);library(texreg)
+
+### Paths
+root <- ifelse(user == "aucarter","C:/Users/aucarter/Repos/soc560_proj/", "~/Desktop/University of Washington/Coursework/Winter 2017/SOC 560 Hierarchical Modeling for the Social Sciences/Project/soc560_proj/")
+code.dir <- paste0(root, "code/")
+data.dir <- paste0(root, "data/")
+output.dir <- paste0(root, "")
+
+### Functions
+comp.models <- function(models) {
+  ## Input a list of models and output a table of the BIC's
+  bic.list <- sapply(models, function(model) {
+    BIC <- BIC(logLik(get(model)))
+    return(BIC)
+  })
+  out.dt <- data.table(model = names(bic.list), bic = bic.list)
+  min.bic <- out.dt[bic == min(bic), bic]
+  out.dt[, min := min.bic]
+  out.dt[, diff := bic - min.bic]
+  out.dt[, min := NULL]
+  print(out.dt)
+}
+
+### Code
+## Read in and prep data
+dt_long <- read.csv(paste0(data.dir, "cross_sec_data.csv"))
+dt1990 <- dt_long  %>% filter(!is.na(emissions)) %>% filter(time == 1990)
+dt2000 <- dt_long  %>% filter(!is.na(emissions)) %>% filter(time == 2000)
+dt2010 <- dt_long  %>% filter(!is.na(emissions)) %>% filter(time == 2010)
+dt_change1 <- read.csv(paste0(data.dir, "change_1990_2000.csv"))
+dt_change2 <- read.csv(paste0(data.dir, "change_2000_2010.csv"))
+
+dt_change1 <- dt_change1 %>%
+  mutate(race_1990 = SHRNHW9 + SHRNHB9 + SHRHSP9 + prop_other_race_all_90,
+         race_2000 = SHRNHW0 + SHRNHB0 + SHRHSP0 + prop_other_race_all_00,
+         SHRNHW9 = ifelse(race_1990 > 0, SHRNHW9/race_1990, 0),
+         SHRNHW0 = ifelse(race_2000 > 0, SHRNHW0/race_2000, 0),
+         SHRNHB9 = ifelse(race_1990 > 0, SHRNHB9/race_1990, 0),
+         SHRNHB0 = ifelse(race_2000 > 0, SHRNHB0/race_2000, 0),
+         SHRHSP9 = ifelse(race_1990 > 0, SHRHSP9/race_1990, 0),
+         SHRHSP0 = ifelse(race_2000 > 0, SHRHSP0/race_2000, 0),
+         prop_other_race_all_90 = ifelse(race_1990 > 0, prop_other_race_all_90/race_1990, 0),
+         prop_other_race_all_00 = ifelse(race_2000 > 0, prop_other_race_all_00/race_2000, 0),
+         white_change = SHRNHW0 - SHRNHW9,
+         black_change = SHRNHB0 - SHRNHB9,
+         latino_change = SHRHSP0 - SHRHSP9,
+         other_change = prop_other_race_all_00 - prop_other_race_all_90, 
+         hs_educ_90 = ifelse(EDUCPP9 > 0, EDUC129/EDUCPP9, 0),
+         hs_educ_00 = ifelse(EDUCPP0 > 0, EDUC120/EDUCPP0, 0),
+         col_educ_90 = ifelse(EDUCPP9 > 0, EDUC169/EDUCPP9, 0),
+         col_educ_00 = ifelse(EDUCPP0 > 0, EDUC160/EDUCPP0, 0),
+         avg_white = (SHRNHW9 + SHRNHW0)/2,
+         avg_black = (SHRNHB9 + SHRNHB0)/2, 
+         avg_hispanic = (SHRHSP9 + SHRHSP0)/2,
+         avg_other = (prop_other_race_all_90 + prop_other_race_all_00)/2,
+         avg_povrat = (POVRAT9 + POVRAT0)/2,
+         avg_income = (MDFAMY9 + MDFAMY0)/2, 
+         avg_hs_educ = (hs_educ_90 + hs_educ_00)/2,
+         avg_col_educ = (col_educ_90 + col_educ_00)/2,
+         avg_PC1 = (PC1_1990 + PC1_2000)/2, 
+         avg_PC2 = (PC2_1990 + PC2_2000)/2, 
+         avg_PC3 = (PC3_1990 + PC3_2000)/2, 
+         avg_log_PC1 = (Log_PC1_1990 + Log_PC1_2000)/2, 
+         avg_log_PC2 = (Log_PC2_1990 + Log_PC2_2000)/2, 
+         avg_log_PC3 = (Log_PC3_1990 + Log_PC3_2000)/2, 
+         avg_manuf = (prop_manuf_90 + prop_manuf_00)/2,
+         avg_pop_density = (pop_density_90 + pop_density_00)/2) %>%
+  filter(!is.na(emissions_1990) & !is.na(emissions_2000))
+
+dt_change2 <- dt_change2 %>%
+  mutate(race_2000 = SHRNHW0 + SHRNHB0 + SHRHSP0 + prop_other_race_all_00,
+         race_2010 = SHRNHW1 + SHRNHB1 + SHRHSP1 + prop_other_race_all_10,
+         SHRNHW0 = ifelse(race_2000 > 0, SHRNHW0/race_2000, 0),
+         SHRNHW1 = ifelse(race_2010 > 0, SHRNHW1/race_2010, 0),
+         SHRNHB0 = ifelse(race_2000 > 0, SHRNHB0/race_2000, 0),
+         SHRNHB1 = ifelse(race_2010 > 0, SHRNHB1/race_2010, 0),
+         SHRHSP0 = ifelse(race_2000 > 0, SHRHSP0/race_2000, 0),
+         SHRHSP1 = ifelse(race_2010 > 0, SHRHSP1/race_2010, 0),
+         prop_other_race_all_00 = ifelse(race_2000 > 0, prop_other_race_all_00/race_2000, 0),
+         prop_other_race_all_10 = ifelse(race_2010 > 0, prop_other_race_all_10/race_2010, 0),
+         white_change = SHRNHW1 - SHRNHW0,
+         black_change = SHRNHB1 - SHRNHB0,
+         latino_change = SHRHSP1 - SHRHSP0,
+         other_change = prop_other_race_all_10 - prop_other_race_all_00, 
+         hs_educ_00 = ifelse(EDUCPP0 > 0, EDUC120/EDUCPP0, 0),
+         hs_educ_10 = ifelse(EDUCPP1A > 0, EDUC121A/EDUCPP1A, 0),
+         col_educ_00 = ifelse(EDUCPP0 > 0, EDUC160/EDUCPP0, 0),
+         col_educ_10 = ifelse(EDUCPP1A > 0, EDUC161A/EDUCPP1A, 0),
+         avg_white = (SHRNHW0 + SHRNHW1)/2,
+         avg_black = (SHRNHB0 + SHRNHB1)/2, 
+         avg_hispanic = (SHRHSP0 + SHRHSP1)/2,
+         avg_other = (prop_other_race_all_00 + prop_other_race_all_10)/2,
+         avg_povrat = (POVRAT0 + POVRAT1A)/2,
+         avg_income = (MDFAMY0 + MDFAMY1A)/2, 
+         avg_hs_educ = (hs_educ_00 + hs_educ_10)/2,
+         avg_col_educ = (col_educ_00 + col_educ_10)/2,
+         avg_PC1 = (PC1_2000 + PC1_2010)/2, 
+         avg_PC2 = (PC2_2000 + PC2_2010)/2, 
+         avg_PC3 = (PC3_2000 + PC3_2010)/2, 
+         avg_log_PC1 = (Log_PC1_2000 + Log_PC1_2010)/2, 
+         avg_log_PC2 = (Log_PC2_2000 + Log_PC2_2010)/2, 
+         avg_log_PC3 = (Log_PC3_2000 + Log_PC3_2010)/2, 
+         avg_manuf = (prop_manuf_00 + prop_manuf_10)/2,
+         avg_pop_density = (pop_density_00 + pop_density_10)/2) %>%
+  filter(!is.na(emissions_2000) & !is.na(emissions_2010))
+
+dt1990 <- dt1990 %>%
+  mutate(hs_educ = ifelse(EDUCPP > 0, EDUC12/EDUCPP, 0),
+         col_educ = ifelse(EDUCPP > 0, EDUC16/EDUCPP, 0),
+         race_total = SHRNHW + SHRNHB + SHRHSP + prop_other_race_all, 
+         SHRNHW = ifelse(race_total > 0, SHRNHW/race_total, 0),
+         SHRNHB = ifelse(race_total > 0 ,SHRNHB/race_total, 0),
+         SHRHSP = ifelse(race_total > 0, SHRHSP/race_total, 0),
+         prop_other_race_all = ifelse(race_total > 0, 
+                                      prop_other_race_all/race_total,
+                                      0))
+
+dt2000 <- dt2000 %>%
+  mutate(hs_educ = ifelse(EDUCPP > 0, EDUC12/EDUCPP, 0),
+         col_educ = ifelse(EDUCPP > 0, EDUC16/EDUCPP, 0),
+         race_total = SHRNHW + SHRNHB + SHRHSP + prop_other_race_all, 
+         SHRNHW = ifelse(race_total > 0, SHRNHW/race_total, 0),
+         SHRNHB = ifelse(race_total > 0 ,SHRNHB/race_total, 0),
+         SHRHSP = ifelse(race_total > 0, SHRHSP/race_total, 0),
+         prop_other_race_all = ifelse(race_total > 0, 
+                                      prop_other_race_all/race_total,
+                                      0))
+
+dt2010 <- dt2010 %>%
+  mutate(hs_educ = ifelse(EDUCPP > 0, EDUC12/EDUCPP, 0),
+         col_educ = ifelse(EDUCPP > 0, EDUC16/EDUCPP, 0),
+         race_total = SHRNHW + SHRNHB + SHRHSP + prop_other_race_all, 
+         SHRNHW = ifelse(race_total > 0, SHRNHW/race_total, 0),
+         SHRNHB = ifelse(race_total > 0 ,SHRNHB/race_total, 0),
+         SHRHSP = ifelse(race_total > 0, SHRHSP/race_total, 0),
+         prop_other_race_all = ifelse(race_total > 0, 
+                                      prop_other_race_all/race_total,
+                                      0))
+
+## Summarize data
+state.means.1990 <- dt1990 %>% group_by(STATEFP10) %>% summarize_all(funs(mean, sd))
+county.means.1990 <- dt1990 %>% group_by(COUNTYFP10) %>% summarize_all(funs(mean, sd))
+tract.means.1990 <- dt1990 %>% group_by(TRACTCE10) %>% summarize_all(funs(mean, sd))
+
+state.means.2000 <- dt2000 %>% group_by(STATEFP10) %>% summarize_all(funs(mean, sd))
+county.means.2000 <- dt2000 %>% group_by(COUNTYFP10) %>% summarize_all(funs(mean, sd))
+tract.means.2000 <- dt2000 %>% group_by(TRACTCE10) %>% summarize_all(funs(mean, sd))
+
+state.means.2010 <- dt2010 %>% group_by(STATEFP10) %>% summarize_all(funs(mean, sd))
+county.means.2010 <- dt2010 %>% group_by(COUNTYFP10) %>% summarize_all(funs(mean, sd))
+tract.means.2010 <- dt2010 %>% group_by(TRACTCE10) %>% summarize_all(funs(mean, sd))
+```
+
+
+## Introduction
+
+Research on environmental inequality grew out of several studies conducted during the 1980s which found evidence of the disproportionate presence of environmental hazards in neighborhoods composed largely of people of color and those from the lower rungs of the socioeconomic ladder (GAO 1983; CRJ 1987). While these studies highlighted an important area of research, they were limited in their ability to generalized to a broader population. Spurred by these findings, however, researchers began investigating this topic more thoroughly during the 1990s to better understand both the causes and mechanisms through which this inequitable distribution of environmental ills came about. Due to a variety of inconsistencies in geographic scope and scale, the definition of environmental hazards, and data quality more generally, the findings from this literature were somewhat mixed. However, with the improvement of both data quality and the methods used to explore the question of environmental inequality, the evidence overwhelmingly supports the argument that people of color and those of lower socioeconomic status are more likely to be exposed to environmental hazards (Brown 1995, Szasz and Meuser 1997, Institute of Medicine (US) Committee on Environmental Justice 1999, Evans and Kantrowitz 2002, Bullard, Mohai et al. 2008). 
+
+One of the main questions explored by this research in recent years has been to ascertain the mechanisms through which these inequalities came about and tend to persist. The two major processes put forth are what Mohai and Saha refer to as "disparate siting" and "post-siting demographic change" (Mohai and Saha 2015). In the former, the siting of a polluting facility or hazardous waste sites happens more often in neighborhoods where people of color and the poor tend to live whereas in the latter the demographic makeup of the area around a facility becomes more heavily concentrated by people of color and the poor over time. Understanding how these mechanisms operate and which process explains the lionshare of the variation in neighborhood disparities is extremely important for urban and environmental policymakers as it has the ability to inform appropriate ways by which equality can be achieved. However, it has been noted by scholars in this field that the structural nature of racism tends to make any clear-cut distinctions among these mechanisms purely abstract (Bonilla-Silva 2007, Mohai et al 2009). Additionally, in the decades since the emergence of this literature, there have been fundamental shifts in standards for emissions as well as the structure of the U.S. economy. The former of these has resulted in a secular decline in air pollution emissions monitored by the Environmental Protection Agency (EPA 2017). Simultaneously, the shift of the American economy from one structured around manufacturing and industrial output to one that is mostly service-based has changed the literal landscape of American neighborhoods (Wilson 1987). Lastly, the level of residential segregation has been declining in most American cities since its height in the 1980s (Cutler et al 1999). Despite these changes, it has yet to be determined what influence they have had on the share to which certain groups of people are exposed to air pollution. Furthermore, despite stricter federal emissions standards put forth in amendments to the Clean Air Act in 1990, states are tasked with enacting their own methods and rules for implementation so long as the federal levels are not exceeded. This has led to significant variability in state-level policy regarding air emissions. The way this state-level variation has played out at the neighborhood level has not yet been explored in the environmental inequality literature. This study seeks to fill this gap in the literature and contribute to a better understanding of how broad environmental policy agendas such as the Clean Air Act may be interacting with other macro structural processes at the local level.
+
+## Data
+
+The data for this research comes from three sources: the Neighborhood Change Database (NCDB), the EPA's Toxic Release Inventory (TRI), and the EPA's Enforcement and Compliance History Online (ECHO) Database. 
+
+### Neighborhood Change Database
+Created by Geolytics in association with the Urban Institute, this database allows users to compare U.S. census tracts over time by employing a methodology that normalizes all tracts to 2010 geographical boundaries. For this analysis we utilize data on census tracts from 1990, 2000, and 2010 including variables on racial/ethnic composition (proportions of non-hispanic white, non-hispanic black, non-hispanic other race, and hispanic), proportion employed in manufacturing, population density, median family income, proportion of high school graduates, proportion of college (or greater) graduates, and poverty rate. 
+
+#### Toxic Release Inventory
+The EPA requires all large-scale, industrial facilities to report the number (in pounds) of toxic emissions they release each year. This dataset therefore contains the location (latitude and longitude) and estimated pounds of emissions for each facility that handles more than 10,000 pounds of a toxic chemicals each year. We were able to utilize the air emissions portion of these data to create a relative average emissions for each tract in the continental United States. This was done using GIS software to create a raster heat map from the vector map of facilities. Using the Heatmap plugin in QGIS and setting the radius for each kernel density function to 1.5 miles, (consistent with prior literature) a raster map of the continental United States was populated with 400m by 400m pixels. The values of these pixels reflected their relative distance to polluting facilities with higher values for pixels that were closer to facilities. This method was particularly appealing because it allowed for a pixel that was near multiple facilities to be more heavily weighted and for those pixels that were near extremely high emitters to reflect that quantitative difference. 
+	
+Using this heatmap raster the SpatialStats Plugin was used to average all pixels within a census tract (using 2010 boundaries) to arrive at an average emissions level for each tract. This same process was carried out for the years 1990, 2000, and 2010 and merged with the Neighborhood Change Database. It should be noted that the "average tract emissions" variable does not have an interpretable unit of analysis due to the way it is created. It can, however, be understood as a relative measure of toxic emissions, which will allow for an analysis comparing relative emissions by tract. 
+
+### Enforcement and Compliance History Online
+Lastly, to get a sense of the state-level variation with respect to the enforcement and compliance of the Clean Air Act standards we utilized the ECHO database which contains information on evaluations, violations, and enforcement actions. To maintain consistency, we subset the data to include only TRI-reporting facilities and matched it with the ones contained within our TRI dataset for the years 1990, 2000, and 2010. Due to the volume of information contained within this database we decided to run a Principal Component Analysis (PCA) on eight of the variables we felt captured important aspects of enforcement and compliance: number of facilities, evaluations, high priority violations, formal actions, informal actions, total stack tests, passed stack tests, and failed stack tests. From the resulting PCA we selected the first three loadings, which captured 85% of the variation contained within the eight aforementioned variables. We then merged these three state-level PCA variables to our full dataset for each of the years 1990, 2000, and 2010. 
+
+## Methods
+
+The two main investigations of interest driving this analysis are 1) the extent to which the racial composition of a neighborhood has been predictive of air pollution levels, and how this has changed since the passage of the amendments to the Clean Air Act in 1990 and 2) how state-level variation in enforcement and compliance of these national EPA standards helps to explain such tract-level variation in the relationship between race and emissions.
+
+### Cross-sectional analysis
+
+To assess the first of these questions we carried out three cross-sectional multilevel models, one for each year in our dataset. In each model we included random effects for the state and fixed effects for our predictor variables. Our relative average air emissions variable was the outcome of interest. In order to assess which control variables should be included, we used Bayesian Model Averaging for generalized linear models with a gaussian distribution. Any variable that were found to be significant in any of the iterations were included as controls in each of the models. For each year of cross-sectional data we tested the same set of permutations of race and state level enforcement and compliance variables. Our full set of models for cross-sectional analysis were:
+
+1. A baseline linear model including only controls
+2. A multilevel model including controls and state random intercepts
+3. Race variables
+4. Enforcement and compliance variables[^1]
+5. Race variables and enforcement and compliance variables^1^
+6. All race variables interacted with enforcement and compliance variables^1^
+7. Black interacted with enforcement and compliance variables^1^
+8. White interacted with enforcement and compliance variables^1^
+9. Hispanic interacted with enforcement and compliance variables^1^
+10. Other interacted with enforcement and compliance variables^1^
+
+[^1]:Including controls and state random intercepts
+
+For each time period, we chose our best model using the Bayesian information criterion (BIC), which compares the likelihood of each model while penalizing for the number of parameters included.
+
+### Change over time analysis
+
+For the second question we restructured our data and ran two change models, 1990 to 2000 and 2000 to 2010. This allowed us to incorporate the time dependency between our observations and therefore attempt to capture the multiple structural changes (i.e. segregation, manufacturing, and air pollution decline) occurring over the course of our data's time frame. These models were also hierarchical with state random effects. Using the same methodology for choosing control variables, we built out and compared the following set of models:
+
+1. A baseline linear model including only controls
+2. A multilevel model including controls and state random intercepts
+3. Average race variables
+4. Change in race variables[^2]
+5. Average and change in race variables^2^
+6. Enforcement and compliance variables^2^
+7. All race variables and enforcement and compliance variables^2^
+8. All average race variables interacted with enforcement and compliance variables^2^
+9. Average black interacted with enforcement and compliance variables^2^
+10. Average white interacted with enforcement and compliance variables^2^
+11. Average hispanic interacted with enforcement and compliance variables^2^
+12. Average other interacted with enforcement and compliance variables^2^
+13. All change in race variables interacted with enforcement and compliance variables^2^
+14. Change in black interacted with enforcement and compliance variables^2^
+15. Change in white interacted with enforcement and compliance variables^2^
+16. Change in hispanic interacted with enforcement and compliance variables^2^
+17. Change in other interacted with enforcement and compliance variables^2^
+
+[^2]:Including controls and state random intercepts
+
+To assess whether or not there was sufficient state level variation to include state random intercepts, we plotted the random intercepts from each of our best models.
+
+## Results
+
+### 1990 cross-sectional analysis
+
+Education, poverty, manufacturing and population density were found to be significant controls. The best model was the multilevel model including interactions between the proportion of the neighborhood that was Hispanic and the enforcement and compliance variables. In this model, the enforcement and compliance variables were not significant, but the interaction of the first and second PCA variable with the proportion were significant and positive.
+
+```{r, echo = F, width  = 6}
+##############################
+### Cross sectional models ###
+##############################
+
+### 1990 ###
+# Assess the significance of controls
+dt90 <- as.data.table(dt1990)
+controls.list <- c("MDFAMY", "hs_educ", "col_educ", "POVRAT", "prop_manuf", "pop_density")
+test3 <- bic.glm(dt90[, controls.list, with = F], dt90$emissions, glm.family = gaussian)
+par(mfrow = c(1,1), oma = c(0,3,0,0))
+imageplot.bma(test3)
+# Should include "hs_educ", "col_educ", "POVRAT", "prop_manuf", "pop_density" in all models
+
+# Baseline (No random intercepts)
+M0 <- lm(emissions ~ hs_educ + col_educ + POVRAT + prop_manuf + pop_density, data = dt1990)
+
+# Baseline (Random intercepts)
+M1 <- lmer(emissions ~ hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990)
+
+# Race
+M2 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
+           hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990)
+# PCA
+M3 <- lmer(emissions ~ Log_PC1 + Log_PC2 + Log_PC3 +
+           hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990)
+
+# Race and PCA
+M4 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all + Log_PC1 + Log_PC2 + Log_PC3 +
+           hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990)
+
+# Race and PCA interaction
+M5 <- lmer(emissions ~ Log_PC1*SHRNHB + Log_PC2*SHRNHB + Log_PC3*SHRNHB + Log_PC1*SHRHSP + Log_PC2*SHRHSP+ Log_PC3*SHRHSP + Log_PC1*prop_other_race_all + Log_PC2*prop_other_race_all + Log_PC3*prop_other_race_all +
+           hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990)
+
+# Black and PCA interaction
+M6 <- lmer(emissions ~ Log_PC1*SHRNHB + Log_PC2*SHRNHB + Log_PC3*SHRNHB +
+           hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990)
+
+# White and PCA interaction
+M7 <- lmer(emissions ~ Log_PC1*SHRNHW + Log_PC2*SHRNHW + Log_PC3*SHRNHW +
+           hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990)
+
+# Hispanic and PCA interaction
+M8 <- lmer(emissions ~ Log_PC1*SHRHSP + Log_PC2*SHRHSP+ Log_PC3*SHRHSP +
+           hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990)
+
+# Other and PCA interaction
+M9 <- lmer(emissions ~ Log_PC1*prop_other_race_all + Log_PC2*prop_other_race_all + Log_PC3*prop_other_race_all +
+           hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990)
+
+comp.models(paste0("M", 0:9))
+
+# Model 8 seems to be the best for 1990
+print(texreg(M8), comment = F)
+
+# Visualizing the state random effects for the best fitting model
+lattice::dotplot(ranef(M8, condVar = TRUE))
+```
+
+### 2000 cross-sectional analysis
+
+Education, poverty, and manufacturing were found to be significant controls. The best model was the multilevel baseline model that only included controls. None of the models that included our variables of interest sufficiently improved the likelihood of the model given the increase in parameters.
+
+### 2010 cross-sectional analysis
+
+Family income, education, poverty, and manufacturing were found to be significant controls. The best model was the multilevel model that had only the racial variables. None of the models that included our variables of interest sufficiently improved the likelihood of the model given the increase in parameters.
+
+### 1990-2000 change analysis
+
+Emissions in 1990, poverty, high school education, and manufacturing were found to be significant controls. The best model was the multilevel model including interactions between proportion White and the enforcement and compliance variables. Every parameter coefficient was statistically significant, and the enforcement and compliance variables had the expected positive correlation with declines in emissions. Both the proportion white and its interaction with enforcement and compliance had negative coefficients, implying that the declines in emissions for a given level of enforcement and compliance were smaller for tracts with a higher proportion of white residents. 
+
+### 2000-2010 change analysis
+
+Emissions in 2000 and education were found to be significant controls. The best model was the multilevel model including interactions between the change in proportion White and the enforcement and compliance variables. The every parameter coefficient was statistically significant, and the enforcement and compliance variables had the expected positive correlation with declines in emissions. Change in proportion white, as well as two of the interactions between change in proportion white and the enforcement and compliance variables, had negative coefficients. The third interaction had a smaller positive coefficient. 
+
+### Random intercepts
+
+The plots of the random intercepts from each of our best models exhibit high levels of within- and between-state variation. In each of the models, a significant proportion of random intercepts do not contain zero, and there is heterogeneity in the variance of intercepts.
+
+## Discussion & Conclusion
+
+Our investigation highlights both the historical racial disparities in exposure to emissions and the critical contributions of environmental regulations and enforcement to ending this unequal exposure. Even in 2010, 20 years after the passing of the Clean Air Act, communities with a greater share of black or hispanic residents are exposed to more pollution as was the case in 1990. At the same time, the average proportion white in a tract and increases in the proportion white were found to be associated with smaller declines in emissions for that tract. Our results imply that white communities experience less improvement in air quality for a given level of enforcement and compliance. While some may consider this inequality problematic, we believe that policies should be equitable, which in the case of air pollution means that larger declines in air pollution need to occur in communities of color because of the unequal distribution of emissions prior to the institution of the act.
+
+The inclusion of random intercepts in our models was justified by their contribution to an improved BIC. Further, the high level of variance between states and the high within-state variance in a number of states implies that our multilevel modelling impacted state-level inference. Future investigation of the dynamics of emissions control and race should similarly utilize random effects.
+
+There were a number of limitations to our study, including the large time gaps between observations and the aggregate nature of the data. The addition of stricter air pollution standards to the Clean Air Act in 1990 made that year a natural starting point for this analysis, especially given that it coincided with required reporting of large-scale polluting facilities and the accompanying evaluation and compliance data. However, census variables on our controls and main predictors of interest were only available in 1990, 2000, and 2010 (unfortunately the American Community Survey which provides estimates for years between decennial censuses was not fully implemented until 2005). Therefore, our data was limited to assessing large-scale structural trends on micro-neighborhood changes with data that was only able to capture three points in time. Ideally, future exploration of this area of research will have more temporal variation, allowing for a better assessment of the mechanisms characterizing the macro- and micro- changes. 
+
+Relatedly, while this study sought to investigate neighborhood change, much more inference could be made if these data were individual-level rather than tract-level aggregations. Given individual-level covariates, as well as the original point-location sources of polluting facilities, a much more fine-grained analysis could be conducted at this level, allowing for more causal conclusions to potentially be drawn from the results. 
+
+### References
+
+Bonilla-Silva E 1997 Rethinking racism: toward a structural interpretation Am. Sociological Rev. 62 465-80.
+
+Brown, P. (1995). "RACE, CLASS, AND ENVIRONMENTAL-HEALTH - A REVIEW AND SYSTEMATIZATION OF THE LITERATURE." Environmental Research 69(1): 15-30.
+
+Bullard, Robert D., Paul Mohai, Robin Saha, and Beverly Wright. 2008. "Toxic Wastes and Race at Twenty: Why Race Still Matters after All of These Years Environmental Justice: Making It a Reality." Environmental Law 38:371-412.
+
+Commission for Racial Justice (1987). Toxic wastes and race in the United States: A national report on the racial and socioeconomic characteristics of communities with hazardous waste sites. New York, United Church of Christ.
+
+Cutler, David M., Edward L. Glaeser, and Jacob L. Vigdor. 1999. "The Rise and Decline of the American Ghetto." Journal of Political Economy 107(3):455-506.
+
+EPA, US. "National Air Quality: Status and Trends of Key Air Pollutants." (https://www.epa.gov/air-trends).
+
+Evans, G. W. and E. Kantrowitz (2002). "Socioeconomic status and health: The potential role of environmental risk exposure." Annual Review of Public Health 23: 303-331.
+
+GAO, (U. S. Government Accountability Office). 1983. "Siting of Hazardous Waste Landfills and Their Correlation With Racial and Economic Status of Surrounding Communities." (RCED-83-168).  (http://www.gao.gov/products/RCED-83-168).
+
+Institute of Medicine (US) Committee on Environmental Justice (1999). Toward environmental justice: Research, education, and health policy needs, National Academies Press (US).
+
+Mohai P, Pellow D and Roberts J T 2009a Environmental justice Annu. Rev. Environ. Resour. 34 405-30.
+
+Mohai, Paul and Robin Saha. 2015. "Which Came First, People or Pollution? A Review of Theory and Evidence from Longitudinal Environmental Justice Studies." Environmental Research Letters 10(12):125011.
+
+NCDB. "GeoLytics - US Census Demographic and GIS Data Products." (http://www.geolytics.com/USCensus,Neighborhood-Change-Database-1970-2000,Products.asp).
+
+Szasz, A. and M. Meuser (1997). "Environmental Inequalities: Literature Review and Proposals for New Directions in Research and Theory." Current Sociology 45(3): 99-120.
+
+TRI. "Toxics Release Inventory (TRI) Program." (https://www.epa.gov/toxics-release-inventory-tri-program).
+
+Wilson, William J. 1987. The Truly Disadvantaged: The Inner City, the Underclass, and Public Policy. University of Chicago Press.
+
+## Variable dictionary
+
+\begin{table}[]
+\centering
+\caption{Change Models Variables}
+\label{my-label}
+\begin{tabular}{lc}
+\cline{1-1}
+\multicolumn{1}{|c|}{\textbf{Name}} & \textbf{Description}                                                                                                                       \\ \cline{1-1}
+\multicolumn{2}{c}{\textit{Change Models}}                                                                                                                                       \\
+emissions                           & \multicolumn{1}{l}{Average tract-level emissions}                                                                                          \\
+SHRNHB                              & \begin{tabular}[c]{@{}c@{}}Proportion non-hispanic Black\\ living in tract\end{tabular}                                                    \\
+SHRHSP                              & \begin{tabular}[c]{@{}c@{}}Proportion Hispanic/Latinx \\ living in tract\end{tabular}                                                      \\
+prop\_other\_race\_all              & \begin{tabular}[c]{@{}c@{}}Proportion non-hispanic Other \\ race living in tract\end{tabular}                                              \\
+MDFAMY                              & \multicolumn{1}{l}{Median family income of tract}                                                                                          \\
+hs\_educ                            & \begin{tabular}[c]{@{}c@{}}Proportion of high school \\ graduates in tract\end{tabular}                                                    \\
+col\_educ                           & \begin{tabular}[c]{@{}c@{}}Proportion of college (or more) \\ graduates in tract\end{tabular}                                              \\
+POVRAT                              & Poverty rate in tract                                                                                                                      \\
+prop\_manuf                         & \begin{tabular}[c]{@{}c@{}}Proportion of civilian workforce \\ 16+ years working in manufacturing\\ in tract\end{tabular}                  \\
+pop\_density                        & Population density of tract                                                                                                                \\
+Log\_PC1                            & \begin{tabular}[c]{@{}c@{}}Logged version of first principal \\ component for state-level evaluation/\\ compliance variation\end{tabular}  \\
+Log\_PC2                            & \begin{tabular}[c]{@{}c@{}}Logged version of second principal \\ component for state-level evaluation/\\ compliance variation\end{tabular} \\
+Log\_PC3                            & \begin{tabular}[c]{@{}c@{}}Logged version of third principal \\ component for state-level evaluation/\\ compliance variation\end{tabular}  \\
+STUSAB                              & State Abbreviations                                                                                                                       
+\end{tabular}
+\end{table}
+
+
+\begin{table}[]
+\centering
+\caption{Cross-Sectional Models Variables}
+\label{my-label}
+\begin{tabular}{lc}
+\cline{1-1}
+\multicolumn{1}{|c|}{\textbf{Name}} & \textbf{Description}                                                                                                                                                     \\ \cline{1-1}
+\multicolumn{2}{c}{\textit{Cross-sectional Models}}                                                                                                                                                            \\
+emissions\_decrease                 & \begin{tabular}[c]{@{}c@{}}The amount average tract-level\\ emissions decreased from \\ time1 to time2\end{tabular}                                                      \\
+emissions\_1990                     & \begin{tabular}[c]{@{}c@{}}Average tract-level emissions \\ in 1990\end{tabular}                                                                                         \\
+emissions\_2000                     & \begin{tabular}[c]{@{}c@{}}Average tract-level emissions \\ in 2000\end{tabular}                                                                                         \\
+avg\_white                          & \begin{tabular}[c]{@{}c@{}}Average proportion non-hispanic\\ White at time1 and time2 in tract\end{tabular}                                                              \\
+white\_change                       & \begin{tabular}[c]{@{}c@{}}Difference between proportion \\ white from time1 to time2 in tract\end{tabular}                                                              \\
+avg\_hs\_educ                       & \begin{tabular}[c]{@{}c@{}}Average proportion of high school \\ graduates at time1 and time2 in tract\end{tabular}                                                       \\
+avg\_col\_educ                      & \begin{tabular}[c]{@{}c@{}}Average proportion of college \\ (or more) graduates at time1 \\ and time2 in tract\end{tabular}                                              \\
+avg\_povrat                         & \begin{tabular}[c]{@{}c@{}}Average poverty rate at time1 \\ and time2 in tract\end{tabular}                                                                              \\
+avg\_manuf                          & \begin{tabular}[c]{@{}c@{}}Average proportion of civilian \\ workforce 16+ years working \\ in manufacturing at time1 \\ and time2 in tract\end{tabular}                 \\
+avg\_log\_PC1                       & \begin{tabular}[c]{@{}c@{}}Average logged version of first \\ principal component for state-level \\ evaluation/compliance variation\\ at time1 and time2\end{tabular}   \\
+avg\_log\_PC2                       & \begin{tabular}[c]{@{}c@{}}Average logged version of second \\ principal component for state-level \\ evaluation/compliance variation \\ at time1 and time2\end{tabular} \\
+avg\_log\_PC3                       & \begin{tabular}[c]{@{}c@{}}Average logged version of third \\ principal component for state-level \\ evaluation/compliance variation\\ at time1 and time2\end{tabular}   \\
+STUSAB                              & State Abbreviations                                                                                                                                                     
+\end{tabular}
+\end{table}
+
+
+
+<!-- ```{r raw emissions, echo = F} -->
+<!-- ############################################## -->
+<!-- ## Plotting the state-ordered raw emissions ## -->
+<!-- ############################################## -->
+
+<!-- # 1990 -->
+<!-- nj <- tapply(state.means.1990$emissions_mean, state.means.1990$STATEFP10, length) -->
+<!-- statemeans <- state.means.1990$emissions_mean -->
+<!-- statesd <- state.means.1990$emissions_sd -->
+<!-- nstate <- length(nj) -->
+<!-- lower <- statemeans - 1.96* statesd -->
+<!-- upper <- statemeans + 1.96* statesd -->
+<!-- ymax <- max (upper) -->
+<!-- ymin <- min (lower) -->
+
+
+<!-- plot (1:nstate, statemeans[order(statemeans)], pch=19,ylim=c(ymin,ymax), -->
+<!--       xlab="State rank by mean emmisions in 1990", ylab="Emissions", -->
+<!--       main = "Ordered State Emmissions (1990)") -->
+<!-- for (j in 1:nstate) { -->
+<!--   jj <- order(statemeans)[j] -->
+<!--   lines (x=c(j,j),y=c(lower[jj],upper[jj])) -->
+<!-- } -->
+<!-- abline (h=0,col="red") -->
+<!-- text(46.5, -10000, labels = "IN, TN, RI", col = "blue") -->
+<!-- text(3, 3000, labels = "DC, NV, VT", col = "blue") -->
+
+<!-- # 2000 -->
+<!-- nj <- tapply(state.means.2000$emissions_mean, state.means.2000$STATEFP10, length) -->
+<!-- statemeans <- state.means.2000$emissions_mean -->
+<!-- statesd <- state.means.2000$emissions_sd -->
+<!-- nstate <- length(nj) -->
+<!-- lower <- statemeans - 1.96* statesd -->
+<!-- upper <- statemeans + 1.96* statesd -->
+<!-- ymax <- max (upper) -->
+<!-- ymin <- min (lower) -->
+
+<!-- plot (1:nstate, statemeans[order(statemeans)], pch=19,ylim=c(ymin,ymax), -->
+<!--       xlab="State rank by mean emmisions in 2000", ylab="Emissions", -->
+<!--       main = "Ordered State Emmissions (2000)") -->
+<!-- for (j in 1:nstate) { -->
+<!--   jj <- order(statemeans)[j] -->
+<!--   lines (x=c(j,j),y=c(lower[jj],upper[jj])) -->
+<!-- } -->
+<!-- abline (h=0,col="red") -->
+<!-- text(46.5, -4000, labels = "MI, IN, VA", col = "blue") -->
+<!-- text(4, 1000, labels = "VT, NM, NV", col = "blue") -->
+
+<!-- # 2010 -->
+<!-- nj <- tapply(state.means.2010$emissions_mean, state.means.2010$STATEFP10, length) -->
+<!-- statemeans <- state.means.2010$emissions_mean -->
+<!-- statesd <- state.means.2010$emissions_sd -->
+<!-- nstate <- length(nj) -->
+<!-- lower <- statemeans - 1.96* statesd -->
+<!-- upper <- statemeans + 1.96* statesd -->
+<!-- ymax <- max (upper) -->
+<!-- ymin <- min (lower) -->
+
+<!-- plot (1:nstate, statemeans[order(statemeans)], pch=19,ylim=c(ymin,ymax), -->
+<!--       xlab="State rank by mean emmisions in 2010", ylab="Emissions", -->
+<!--       main = "Ordered State Emmissions (2010)") -->
+<!-- for (j in 1:nstate) { -->
+<!--   jj <- order(statemeans)[j] -->
+<!--   lines (x=c(j,j),y=c(lower[jj],upper[jj])) -->
+<!-- } -->
+<!-- abline (h=0,col="red") -->
+<!-- text(46.5, -3000, labels = "KY, WV, LA", col = "blue") -->
+<!-- text(4, 800, labels = "VT, DC, NM", col = "blue") -->
+
+<!-- ######################################################## -->
+<!-- ## Plotting the state-ordered change in raw emissions ## -->
+<!-- ######################################################## -->
+
+<!-- change1 <- cbind.data.frame(State = state.means.2000$STATEFP10, -->
+<!--                             Emissions = state.means.1990$emissions_mean, -->
+<!--                             Change = state.means.2000$emissions_mean - state.means.1990$emissions_mean) -->
+<!-- change2 <- cbind.data.frame(State = state.means.2010$STATEFP10, -->
+<!--                             Emissions = state.means.2000$emissions_mean, -->
+<!--                             Change = state.means.2010$emissions_mean - state.means.2000$emissions_mean) -->
+<!-- change3 <- cbind.data.frame(State = state.means.2010$STATEFP10, -->
+<!--                             Emissions = state.means.1990$emissions_mean, -->
+<!--                             Change = state.means.2010$emissions_mean - state.means.1990$emissions_mean) -->
+<!-- nj <- tapply(state.means.2010$emissions_mean, state.means.2010$STATEFP10, length) -->
+<!-- nstate <- length(nj) -->
+<!-- ymax <- max (change1$Change) -->
+<!-- ymin <- min (change1$Change) -->
+
+<!-- # 1990 - 2000 -->
+<!-- plot (1:nstate, change1$Change[order(change1$Change)], pch=19,ylim=c(ymin,ymax), -->
+<!--       xlab="State rank by raw change in mean emmissions between 1990 and 2000", ylab="Change in Emissions", -->
+<!--       main = "Ordered State Emmissions Change (1990 - 2000)") -->
+<!-- abline (h=0,col="red") -->
+<!-- text(46.5, 55, labels = "MT, ND, DC", col = "blue") -->
+<!-- text(4, -800, labels = "IL, TN, RI", col = "blue") -->
+
+<!-- # 2000 - 2010 -->
+<!-- ymax <- max (change2$Change) -->
+<!-- ymin <- min (change2$Change) -->
+<!-- plot (1:nstate, change2$Change[order(change2$Change)], pch=19,ylim=c(ymin,ymax), -->
+<!--       xlab="State rank by raw change in mean emmissions between 2000 and 2010", ylab="Change in Emissions", -->
+<!--       main = "Ordered State Emmissions Change (2000 - 2010)") -->
+<!-- abline (h=0,col="red") -->
+<!-- text(46.5, 15, labels = "ND, WY, MT", col = "blue") -->
+<!-- text(4, -294, labels = "NJ, VA, DE", col = "blue") -->
+
+<!-- # 1990 - 2010 -->
+<!-- ymax <- max (change3$Change) -->
+<!-- ymin <- min (change3$Change) -->
+<!-- plot (1:nstate, change3$Change[order(change3$Change)], pch=19,ylim=c(ymin,ymax), -->
+<!--       xlab="State rank by raw change in mean emmissions between 1990 and 2010", ylab="Change in Emissions", -->
+<!--       main = "Ordered State Emmissions Change (1990 - 2010)") -->
+<!-- abline (h=0,col="red") -->
+<!-- text(46.5, -160, labels = "DC, MT, ND", col = "blue") -->
+<!-- text(4, -900, labels = "RI, TN, IN", col = "blue") -->
+
+<!-- ############################################################# -->
+<!-- ## Plotting the state-ordered change in relative emissions ## -->
+<!-- ############################################################# -->
+
+<!-- overallmean1990 <- mean(state.means.1990$emissions_mean) -->
+<!-- overallmean2000 <- mean(state.means.2000$emissions_mean) -->
+<!-- overallmean2010 <- mean(state.means.2010$emissions_mean) -->
+<!-- change1 <- change1 %>% mutate(rel_change = Change/overallmean1990*100) -->
+<!-- change2 <- change2 %>% mutate(rel_change = Change/overallmean2000*100) -->
+<!-- change3 <- change3 %>% mutate(rel_change = Change/overallmean1990*100) -->
+
+<!-- # 1990 - 2000 -->
+<!-- ymax <- max (change1$rel_change) -->
+<!-- ymin <- min (change1$rel_change) -->
+<!-- plot (1:nstate, change1$rel_change[order(change1$rel_change)], pch=19,ylim=c(ymin,ymax), -->
+<!--       xlab="State rank by percentage change in mean emmissions between 1990 and 2000", ylab="% Change in Emissions", -->
+<!--       main = "Ordered State Emmissions Change (1990 - 2000)") -->
+<!-- abline (h=0,col="red") -->
+<!-- text(46.5, -50, labels = "DC, MT, ND", col = "blue") -->
+<!-- text(4, -250, labels = "IN, TN, RI", col = "blue") -->
+
+<!-- # 2000 - 2010 -->
+<!-- ymax <- max (change2$rel_change) -->
+<!-- ymin <- min (change2$rel_change) -->
+<!-- plot (1:nstate, change2$rel_change[order(change2$rel_change)], pch=19,ylim=c(ymin,ymax), -->
+<!--       xlab="State rank by percentage change in mean emmissions between 2000 and 2010", ylab="% Change in Emissions", -->
+<!--       main = "Ordered State Emmissions Change (2000 - 2010)") -->
+<!-- abline (h=0,col="red") -->
+<!-- text(46.5, -25, labels = "MT, WY, ND", col = "blue") -->
+<!-- text(4, -150, labels = "NJ, VA, DE", col = "blue") -->
+
+<!-- # 1990 - 2010 -->
+<!-- ymax <- max (change3$rel_change) -->
+<!-- ymin <- min (change3$rel_change) -->
+<!-- plot (1:nstate, change3$rel_change[order(change3$rel_change)], pch=19,ylim=c(ymin,ymax), -->
+<!--       xlab="State rank by percentage change in mean emmissions between 1990 and 2010", ylab="% Change in Emissions", -->
+<!--       main = "Ordered State Emmissions Change (1990 - 2010)") -->
+<!-- abline (h=0,col="red") -->
+<!-- text(46.5, -35, labels = "DC, MT, ND", col = "blue") -->
+<!-- text(4, -250, labels = "RI, TN, IN", col = "blue") -->
+
+<!-- ################################################################ -->
+<!-- ## Plotting the state-ordered evaluation/compliance variables ## -->
+<!-- ################################################################ -->
+<!-- pca_vars <- dt_long %>% -->
+<!--   group_by(STUSAB, time) %>% -->
+<!--   summarise(log_PC1 = first(Log_PC1), -->
+<!--             log_PC2 = first(Log_PC2), -->
+<!--             log_PC3 = first(Log_PC3), -->
+<!--             PC1 = first(PC1), -->
+<!--             PC2 = first(PC2), -->
+<!--             PC3 = first(PC3)) %>% -->
+<!--   ungroup() %>% -->
+<!--   mutate(STUSAB = as.character(STUSAB)) -->
+<!-- pca_1990 <- pca_vars %>% -->
+<!--   filter(time == 1990, !is.na(log_PC1)) -->
+<!-- pca_2000 <- pca_vars %>% -->
+<!--   filter(time == 2000) -->
+<!-- pca_2010 <- pca_vars %>% -->
+<!--   filter(time == 2010) -->
+
+
+<!-- # Setup -->
+<!-- nj <- tapply(pca_2000$log_PC1, -->
+<!--              pca_2000$STUSAB, length) -->
+<!-- statemeans_PC1_1990 <- pca_1990$log_PC1 -->
+<!-- statemeans_PC1_2000 <- pca_2000$log_PC1 -->
+<!-- statemeans_PC1_2010 <- pca_2010$log_PC1 -->
+<!-- statemeans_PC2_1990 <- pca_1990$log_PC2 -->
+<!-- statemeans_PC2_2000 <- pca_2000$log_PC2 -->
+<!-- statemeans_PC2_2010 <- pca_2010$log_PC2 -->
+<!-- statemeans_PC3_1990 <- pca_1990$log_PC3 -->
+<!-- statemeans_PC3_2000 <- pca_2000$log_PC3 -->
+<!-- statemeans_PC3_2010 <- pca_2010$log_PC3 -->
+<!-- nstate <- length(nj) -->
+<!-- ymax1 <- max (pca_2010$log_PC1) -->
+<!-- ymin1 <- min (pca_2000$log_PC1) -->
+<!-- ymax2 <- max (pca_2010$log_PC2) -->
+<!-- ymin2 <- min (pca_2000$log_PC2) -->
+<!-- ymax3 <- max (pca_1990$log_PC3) -->
+<!-- ymin3 <- min (pca_2000$log_PC3) -->
+<!-- mat <- matrix(c(1,2,3,4,5,6,7,8,9), 3) -->
+
+<!-- par(mfrow=c(3,3)) -->
+<!-- layout(mat, c(2,2,2), c(2,2,2)) -->
+<!-- # PCA 1 -->
+<!-- plot (1:48, statemeans_PC1_1990[order(statemeans_PC1_1990)], -->
+<!--       pch=19,ylim=c(ymin1,ymax1), col = "red", -->
+<!--       xlab="State rank in 1990", ylab = "", -->
+<!--       main = "Ordered State Compliance Measure (PC1)") -->
+<!-- text(6, -1, labels = "ND, NV, VT", col = "red") -->
+<!-- text(43, 3, labels = "WI, OH, PA", col = "red") -->
+<!-- plot(1:nstate, statemeans_PC1_2000[order(statemeans_PC1_2000)], -->
+<!--      xlab="State rank in 2000", ylab = "", pch=19, col = "blue", -->
+<!--      ylim=c(ymin1,ymax1)) -->
+<!-- text(6, 0, labels = "DC, VT, ND", col = "blue") -->
+<!-- text(43, 4, labels = "CA, IN, PA", col = "blue") -->
+<!-- plot(1:nstate, statemeans_PC1_2010[order(statemeans_PC1_2010)], -->
+<!--      xlab="State rank in 2010", ylab = "", pch=19, col = "purple", -->
+<!--      ylim=c(ymin1,ymax1)) -->
+<!-- text(6, 0.5, labels = "DC, VT, ND", col = "purple") -->
+<!-- text(43, 2, labels = "OH, CA, TX", col = "purple") -->
+<!-- # PCA 2 -->
+<!-- plot (1:48, statemeans_PC2_1990[order(statemeans_PC2_1990)], -->
+<!--       pch=19,ylim=c(ymin2,ymax2), col = "red", -->
+<!--       xlab="State rank in 1990", ylab = "", -->
+<!--       main = "Ordered State Compliance Measure (PC2)") -->
+<!-- text(6, -1, labels = "GA, PA, NY", col = "red") -->
+<!-- text(43, 1.3, labels = "WI, NV, ND", col = "red") -->
+<!-- plot(1:nstate, statemeans_PC2_2000[order(statemeans_PC2_2000)], -->
+<!--      xlab="State rank in 2000", ylab = "", pch=19, col = "blue", -->
+<!--      ylim=c(ymin2,ymax2)) -->
+<!-- text(6, -.9, labels = "TX, GA, IL", col = "blue") -->
+<!-- text(43, 2.2, labels = "MN, WI, DC", col = "blue") -->
+<!-- plot(1:nstate, statemeans_PC2_2010[order(statemeans_PC2_2010)], -->
+<!--      xlab="State rank in 2010", ylab = "", pch=19, col = "purple", -->
+<!--      ylim=c(ymin2,ymax2)) -->
+<!-- text(6, -1.5, labels = "NY, MA, WV", col = "purple") -->
+<!-- text(43, 1, labels = "WA, NE, NV", col = "purple") -->
+<!-- # PCA 3 -->
+<!-- plot (1:48, statemeans_PC3_1990[order(statemeans_PC3_1990)], -->
+<!--       pch=19,ylim=c(ymin3,ymax3), col = "red", -->
+<!--       xlab="State rank in 1990", ylab = "", -->
+<!--       main = "Ordered State Compliance Measure (PC3)") -->
+<!-- text(6, -1, labels = "ID, WY, ND", col = "red") -->
+<!-- text(43, 0.5, labels = "TN, NC, TX", col = "red") -->
+<!-- plot(1:nstate, statemeans_PC3_2000[order(statemeans_PC3_2000)], -->
+<!--      xlab="State rank in 2000", ylab = "", pch=19, col = "blue", -->
+<!--      ylim=c(ymin3,ymax3)) -->
+<!-- text(6, -.8, labels = "UT, KY, DC", col = "blue") -->
+<!-- text(43, 1.2, labels = "OH, RI, AZ", col = "blue") -->
+<!-- plot(1:nstate, statemeans_PC3_2010[order(statemeans_PC3_2010)], -->
+<!--      xlab="State rank in 2010", ylab = "", pch=19, col = "purple", -->
+<!--      ylim=c(ymin3,ymax3)) -->
+<!-- text(6, -1.6, labels = "DC, WY, NC", col = "purple") -->
+<!-- text(43, 1.4, labels = "GA, UT, MI", col = "purple") -->
+
+
+<!-- ##################### -->
+<!-- ### Change models ### -->
+<!-- ##################### -->
+
+<!-- ## Fit models for change 1990 - 2000 -->
+<!-- # Assess the significance of controls -->
+<!-- dt1 <- as.data.table(dt_change1) -->
+<!-- controls.list <- c("emissions_1990", "avg_povrat", "avg_income", "avg_hs_educ", "avg_col_educ", "avg_manuf", "avg_pop_density") -->
+<!-- test <- bic.glm(dt1[, controls.list, with = F], dt1$emissions_decrease, glm.family = gaussian) -->
+<!-- par(mfrow = c(1,1), oma = c(0,3,0,0)) -->
+<!-- imageplot.bma(test) -->
+<!-- # Should include emissions_1990, povrat, hs_educ, avg_manuf in all models -->
+
+<!-- # Baseline (No random intercepts) -->
+<!-- M0 <- lm(emissions_decrease ~ emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf, data = dt_change1) -->
+
+<!-- # Baseline (Random intercepts) -->
+<!-- M1 <- lmer(emissions_decrease ~ emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # Average race -->
+<!-- M2 <- lmer(emissions_decrease ~ avg_black + avg_hispanic + avg_other + -->
+<!--            emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # Change race -->
+<!-- M3 <- lmer(emissions_decrease ~ black_change + latino_change + other_change + -->
+<!--            emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # Average and change race -->
+<!-- M4 <- lmer(emissions_decrease ~ avg_black + avg_hispanic + avg_other + black_change + latino_change + other_change + -->
+<!--            emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # PCA -->
+<!-- M5 <- lmer(emissions_decrease ~ avg_log_PC1 + avg_log_PC2 + avg_log_PC3 + -->
+<!--            emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # Average and change in race with PCA -->
+<!-- M6 <- lmer(emissions_decrease ~ avg_black + avg_hispanic + avg_other + black_change + latino_change + other_change + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 + -->
+<!--            emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # PCA with average race interaction -->
+<!-- M7 <- lmer(emissions_decrease ~ avg_log_PC1*avg_black + avg_log_PC2*avg_black + avg_log_PC3*avg_black + avg_log_PC1*avg_hispanic + avg_log_PC2*avg_hispanic + avg_log_PC3*avg_hispanic + avg_log_PC1*avg_other + avg_log_PC2*avg_other + avg_log_PC3*avg_other + -->
+<!--            emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # PCA with black interaction -->
+<!-- M8 <- lmer(emissions_decrease ~ avg_log_PC1*avg_black + avg_log_PC2*avg_black + avg_log_PC3*avg_black + -->
+<!--            emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # PCA with white interaction -->
+<!-- M9 <- lmer(emissions_decrease ~ avg_log_PC1*avg_white + avg_log_PC2*avg_white + avg_log_PC3*avg_white + -->
+<!--            emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # PCA with hispanic interaction -->
+<!-- M10 <- lmer(emissions_decrease ~ avg_log_PC1*avg_hispanic + avg_log_PC2*avg_hispanic + avg_log_PC3*avg_hispanic + -->
+<!--            emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # PCA with other interaction -->
+<!-- M11 <- lmer(emissions_decrease ~ avg_log_PC1*avg_other + avg_log_PC2*avg_other + avg_log_PC3*avg_other + -->
+<!--            emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # PCA with race change interaction -->
+<!-- M12 <- lmer(emissions_decrease ~ avg_log_PC1*black_change + avg_log_PC2*black_change + avg_log_PC3*black_change + avg_log_PC1*latino_change + avg_log_PC2*latino_change + avg_log_PC3*latino_change + avg_log_PC1*other_change + avg_log_PC2*other_change + avg_log_PC3*other_change + -->
+<!--            emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # PCA with black change interaction -->
+<!-- M13 <- lmer(emissions_decrease ~ avg_log_PC1*black_change + avg_log_PC2*black_change + avg_log_PC3*black_change + -->
+<!--            emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # PCA with white change interaction -->
+<!-- M14 <- lmer(emissions_decrease ~ avg_log_PC1*white_change + avg_log_PC2*white_change + avg_log_PC3*white_change + -->
+<!--            emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # PCA with hispanic change interaction -->
+<!-- M15 <- lmer(emissions_decrease ~ avg_log_PC1*latino_change + avg_log_PC2*latino_change + avg_log_PC3*latino_change + -->
+<!--            emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # PCA with other change interaction -->
+<!-- M16 <- lmer(emissions_decrease ~ avg_log_PC1*other_change + avg_log_PC2*other_change + avg_log_PC3*other_change + -->
+<!--            emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- comp.models(paste0("M", 0:16)) -->
+
+<!-- # Model 9 seems to be the best out of the above for 1990 to 2000 -->
+<!-- texreg(M9) -->
+
+<!-- # Visualizing the state random effects for the best fitting model -->
+<!-- lattice::dotplot(ranef(M9, condVar = TRUE)) -->
+
+<!-- ## Fit models for change 2000 - 2010 -->
+<!-- # Assess the significance of controls -->
+<!-- dt2 <- as.data.table(dt_change2) -->
+<!-- controls.list <- c("emissions_2000", "avg_povrat", "avg_income", "avg_hs_educ", "avg_col_educ", "avg_manuf", "avg_pop_density") -->
+<!-- test2 <- bic.glm(dt2[, controls.list, with = F], dt2$emissions_decrease, glm.family = gaussian) -->
+<!-- par(mfrow = c(1,1), oma = c(0,3,0,0)) -->
+<!-- imageplot.bma(test2) -->
+<!-- # Should include emissions_2000, avg_hs_educ, avg_col_educ in all models -->
+
+<!-- # Baseline (No random intercepts) -->
+<!-- M0 <- lm(emissions_decrease ~ emissions_2000 + avg_hs_educ + avg_col_educ, data = dt_change1) -->
+
+<!-- # Baseline (Random intercepts) -->
+<!-- M1 <- lmer(emissions_decrease ~ emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # Average race -->
+<!-- M2 <- lmer(emissions_decrease ~ avg_black + avg_hispanic + avg_other + -->
+<!--            emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # Change race -->
+<!-- M3 <- lmer(emissions_decrease ~ black_change + latino_change + other_change + -->
+<!--            emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # Average and change race -->
+<!-- M4 <- lmer(emissions_decrease ~ avg_black + avg_hispanic + avg_other + black_change + latino_change + other_change + -->
+<!--            emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # PCA -->
+<!-- M5 <- lmer(emissions_decrease ~ avg_log_PC1 + avg_log_PC2 + avg_log_PC3 + -->
+<!--            emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # Average and change in race with PCA -->
+<!-- M6 <- lmer(emissions_decrease ~ avg_black + avg_hispanic + avg_other + black_change + latino_change + other_change + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 + -->
+<!--            emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # PCA with average race interaction -->
+<!-- M7 <- lmer(emissions_decrease ~ avg_log_PC1*avg_black + avg_log_PC2*avg_black + avg_log_PC3*avg_black + avg_log_PC1*avg_hispanic + avg_log_PC2*avg_hispanic + avg_log_PC3*avg_hispanic + avg_log_PC1*avg_other + avg_log_PC2*avg_other + avg_log_PC3*avg_other + -->
+<!--            emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # PCA with black interaction -->
+<!-- M8 <- lmer(emissions_decrease ~ avg_log_PC1*avg_black + avg_log_PC2*avg_black + avg_log_PC3*avg_black + -->
+<!--            emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # PCA with white interaction -->
+<!-- M9 <- lmer(emissions_decrease ~ avg_log_PC1*avg_white + avg_log_PC2*avg_white + avg_log_PC3*avg_white + -->
+<!--            emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # PCA with hispanic interaction -->
+<!-- M10 <- lmer(emissions_decrease ~ avg_log_PC1*avg_hispanic + avg_log_PC2*avg_hispanic + avg_log_PC3*avg_hispanic + -->
+<!--            emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # PCA with other interaction -->
+<!-- M11 <- lmer(emissions_decrease ~ avg_log_PC1*avg_other + avg_log_PC2*avg_other + avg_log_PC3*avg_other + -->
+<!--            emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # PCA with race change interaction -->
+<!-- M12 <- lmer(emissions_decrease ~ avg_log_PC1*black_change + avg_log_PC2*black_change + avg_log_PC3*black_change + avg_log_PC1*latino_change + avg_log_PC2*latino_change + avg_log_PC3*latino_change + avg_log_PC1*other_change + avg_log_PC2*other_change + avg_log_PC3*other_change + -->
+<!--            emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # PCA with black change interaction -->
+<!-- M13 <- lmer(emissions_decrease ~ avg_log_PC1*black_change + avg_log_PC2*black_change + avg_log_PC3*black_change + -->
+<!--            emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # PCA with white change interaction -->
+<!-- M14 <- lmer(emissions_decrease ~ avg_log_PC1*white_change + avg_log_PC2*white_change + avg_log_PC3*white_change + -->
+<!--            emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # PCA with hispanic change interaction -->
+<!-- M15 <- lmer(emissions_decrease ~ avg_log_PC1*latino_change + avg_log_PC2*latino_change + avg_log_PC3*latino_change + -->
+<!--            emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- # PCA with other change interaction -->
+<!-- M16 <- lmer(emissions_decrease ~ avg_log_PC1*other_change + avg_log_PC2*other_change + avg_log_PC3*other_change + -->
+<!--            emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1) -->
+
+<!-- comp.models(paste0("M", 0:16)) -->
+
+<!-- # Model 14 seems to be the best out of the above for 2000 to 2010 -->
+<!-- texreg(M14) -->
+
+<!-- # Visualizing the state random effects for the best fitting model -->
+<!-- lattice::dotplot(ranef(M14, condVar = TRUE)) -->
+
+<!-- ############################## -->
+<!-- ### Cross sectional models ### -->
+<!-- ############################## -->
+
+<!-- ### 1990 ### -->
+<!-- # Assess the significance of controls -->
+<!-- dt90 <- as.data.table(dt1990) -->
+<!-- controls.list <- c("MDFAMY", "hs_educ", "col_educ", "POVRAT", "prop_manuf", "pop_density") -->
+<!-- test3 <- bic.glm(dt90[, controls.list, with = F], dt90$emissions, glm.family = gaussian) -->
+<!-- par(mfrow = c(1,1), oma = c(0,3,0,0)) -->
+<!-- imageplot.bma(test3) -->
+<!-- # Should include "hs_educ", "col_educ", "POVRAT", "prop_manuf", "pop_density" in all models -->
+
+<!-- # Baseline (No random intercepts) -->
+<!-- M0 <- lm(emissions ~ hs_educ + col_educ + POVRAT + prop_manuf + pop_density, data = dt1990) -->
+
+<!-- # Baseline (Random intercepts) -->
+<!-- M1 <- lmer(emissions ~ hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990) -->
+
+<!-- # Race -->
+<!-- M2 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all + -->
+<!--            hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990) -->
+<!-- # PCA -->
+<!-- M3 <- lmer(emissions ~ Log_PC1 + Log_PC2 + Log_PC3 + -->
+<!--            hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990) -->
+
+<!-- # Race and PCA -->
+<!-- M4 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all + Log_PC1 + Log_PC2 + Log_PC3 + -->
+<!--            hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990) -->
+
+<!-- # Race and PCA interaction -->
+<!-- M5 <- lmer(emissions ~ Log_PC1*SHRNHB + Log_PC2*SHRNHB + Log_PC3*SHRNHB + Log_PC1*SHRHSP + Log_PC2*SHRHSP+ Log_PC3*SHRHSP + Log_PC1*prop_other_race_all + Log_PC2*prop_other_race_all + Log_PC3*prop_other_race_all + -->
+<!--            hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990) -->
+
+<!-- # Black and PCA interaction -->
+<!-- M6 <- lmer(emissions ~ Log_PC1*SHRNHB + Log_PC2*SHRNHB + Log_PC3*SHRNHB + -->
+<!--            hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990) -->
+
+<!-- # White and PCA interaction -->
+<!-- M7 <- lmer(emissions ~ Log_PC1*SHRNHW + Log_PC2*SHRNHW + Log_PC3*SHRNHW + -->
+<!--            hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990) -->
+
+<!-- # Hispanic and PCA interaction -->
+<!-- M8 <- lmer(emissions ~ Log_PC1*SHRHSP + Log_PC2*SHRHSP+ Log_PC3*SHRHSP + -->
+<!--            hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990) -->
+
+<!-- # Other and PCA interaction -->
+<!-- M9 <- lmer(emissions ~ Log_PC1*prop_other_race_all + Log_PC2*prop_other_race_all + Log_PC3*prop_other_race_all + -->
+<!--            hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990) -->
+
+<!-- comp.models(paste0("M", 0:9)) -->
+
+<!-- # Model 8 seems to be the best for 1990 -->
+<!-- texreg(M8) -->
+
+<!-- # Visualizing the state random effects for the best fitting model -->
+<!-- lattice::dotplot(ranef(M8, condVar = TRUE)) -->
+
+<!-- ### 2000 ### -->
+<!-- # Assess the significance of controls -->
+<!-- dt00 <- as.data.table(dt2000) -->
+<!-- controls.list <- c("MDFAMY", "hs_educ", "col_educ", "POVRAT", "prop_manuf", "pop_density") -->
+<!-- test4 <- bic.glm(dt00[, controls.list, with = F], dt00$emissions, glm.family = gaussian) -->
+<!-- par(mfrow = c(1,1), oma = c(0,3,0,0)) -->
+<!-- imageplot.bma(test4) -->
+<!-- # Should include "hs_educ", "col_educ", "POVRAT", "prop_manuf" in all models -->
+
+<!-- # Baseline (No random intercepts) -->
+<!-- M0 <- lm(emissions ~ hs_educ + col_educ + POVRAT + prop_manuf, data = dt2000) -->
+
+<!-- # Baseline (Random intercepts) -->
+<!-- M1 <- lmer(emissions ~ hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2000) -->
+
+<!-- # Race -->
+<!-- M2 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all + -->
+<!--            hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2000) -->
+<!-- # PCA -->
+<!-- M3 <- lmer(emissions ~ Log_PC1 + Log_PC2 + Log_PC3 + -->
+<!--            hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2000) -->
+
+<!-- # Race and PCA -->
+<!-- M4 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all + Log_PC1 + Log_PC2 + Log_PC3 + -->
+<!--            hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2000) -->
+
+<!-- # Race and PCA interaction -->
+<!-- M5 <- lmer(emissions ~ Log_PC1*SHRNHB + Log_PC2*SHRNHB + Log_PC3*SHRNHB + Log_PC1*SHRHSP + Log_PC2*SHRHSP+ Log_PC3*SHRHSP + Log_PC1*prop_other_race_all + Log_PC2*prop_other_race_all + Log_PC3*prop_other_race_all + -->
+<!--            hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2000) -->
+
+<!-- # Black and PCA interaction -->
+<!-- M6 <- lmer(emissions ~ Log_PC1*SHRNHB + Log_PC2*SHRNHB + Log_PC3*SHRNHB + -->
+<!--            hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2000) -->
+
+<!-- # White and PCA interaction -->
+<!-- M7 <- lmer(emissions ~ Log_PC1*SHRNHW + Log_PC2*SHRNHW + Log_PC3*SHRNHW + -->
+<!--            hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2000) -->
+
+<!-- # Hispanic and PCA interaction -->
+<!-- M8 <- lmer(emissions ~ Log_PC1*SHRHSP + Log_PC2*SHRHSP+ Log_PC3*SHRHSP + -->
+<!--            hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2000) -->
+
+<!-- # Other and PCA interaction -->
+<!-- M9 <- lmer(emissions ~ Log_PC1*prop_other_race_all + Log_PC2*prop_other_race_all + Log_PC3*prop_other_race_all + -->
+<!--            hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2000) -->
+
+<!-- comp.models(paste0("M", 0:9)) -->
+
+<!-- # Model 1 seems to be the best for 2000 -->
+<!-- texreg(M1) -->
+
+<!-- # Visualizing the state random effects for the best fitting model -->
+<!-- lattice::dotplot(ranef(M1, condVar = TRUE)) -->
+
+
+<!-- ### 2010 ### -->
+<!-- # Assess the significance of controls -->
+<!-- dt10 <- as.data.table(dt2010) -->
+<!-- controls.list <- c("MDFAMY", "hs_educ", "col_educ", "POVRAT", "prop_manuf", "pop_density") -->
+<!-- test5 <- bic.glm(dt10[, controls.list, with = F], dt10$emissions, glm.family = gaussian) -->
+<!-- par(mfrow = c(1,1), oma = c(0,3,0,3)) -->
+<!-- imageplot.bma(test5) -->
+<!-- # Should include "hs_educ", "col_educ", "POVRAT", "prop_manuf" in all models -->
+
+<!-- # Baseline (No random intercepts) -->
+<!-- M0 <- lm(emissions ~ MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf, data = dt2010) -->
+
+<!-- # Baseline (Random intercepts) -->
+<!-- M1 <- lmer(emissions ~ MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2010) -->
+
+<!-- # Race -->
+<!-- M2 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all + -->
+<!--            MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2010) -->
+<!-- # PCA -->
+<!-- M3 <- lmer(emissions ~ Log_PC1 + Log_PC2 + Log_PC3 + -->
+<!--            MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2010) -->
+
+<!-- # Race and PCA -->
+<!-- M4 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all + Log_PC1 + Log_PC2 + Log_PC3 + -->
+<!--            MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2010) -->
+
+<!-- # Race and PCA interaction -->
+<!-- M5 <- lmer(emissions ~ Log_PC1*SHRNHB + Log_PC2*SHRNHB + Log_PC3*SHRNHB + Log_PC1*SHRHSP + Log_PC2*SHRHSP+ Log_PC3*SHRHSP + Log_PC1*prop_other_race_all + Log_PC2*prop_other_race_all + Log_PC3*prop_other_race_all + -->
+<!--            MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2010) -->
+
+<!-- # Black and PCA interaction -->
+<!-- M6 <- lmer(emissions ~ Log_PC1*SHRNHB + Log_PC2*SHRNHB + Log_PC3*SHRNHB + -->
+<!--            MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2010) -->
+
+<!-- # White and PCA interaction -->
+<!-- M7 <- lmer(emissions ~ Log_PC1*SHRNHW + Log_PC2*SHRNHW + Log_PC3*SHRNHW + -->
+<!--            MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2010) -->
+
+<!-- # Hispanic and PCA interaction -->
+<!-- M8 <- lmer(emissions ~ Log_PC1*SHRHSP + Log_PC2*SHRHSP+ Log_PC3*SHRHSP + -->
+<!--            MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2010) -->
+
+<!-- # Other and PCA interaction -->
+<!-- M9 <- lmer(emissions ~ Log_PC1*prop_other_race_all + Log_PC2*prop_other_race_all + Log_PC3*prop_other_race_all + -->
+<!--            MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2010) -->
+
+<!-- comp.models(paste0("M", 0:9)) -->
+
+<!-- # Model 2 seems to be the best for 2010 -->
+<!-- texreg(M2) -->
+
+<!-- # Visualizing the state random effects for the best fitting model -->
+<!-- lattice::dotplot(ranef(M2, condVar = TRUE)) -->
+
+<!-- ### Year Comparisons ### -->
+<!-- # 1990 # -->
+<!-- M11_1 <- lmer(emissions ~ SHRNHB*Log_PC1 + SHRHSP*Log_PC1 + prop_other_race_all*Log_PC1 + -->
+<!--                 SHRNHB*Log_PC2 + SHRHSP*Log_PC2 + prop_other_race_all*Log_PC2 + -->
+<!--                 SHRNHB*Log_PC3 + SHRHSP*Log_PC3 + prop_other_race_all*Log_PC3 + -->
+<!--                 MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density + -->
+<!--                 (1 | STUSAB), REML = F, data = dt1990) -->
+<!-- M11_2 <- lmer(emissions ~ SHRNHB*Log_PC1 + SHRHSP*Log_PC1 + prop_other_race_all*Log_PC1 + -->
+<!--                 SHRNHB*Log_PC2 + SHRHSP*Log_PC2 + prop_other_race_all*Log_PC2 + -->
+<!--                 SHRNHB*Log_PC3 + SHRHSP*Log_PC3 + prop_other_race_all*Log_PC3 + -->
+<!--                 MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density + -->
+<!--                 (1 | STUSAB), REML = F, data = dt2000) -->
+<!-- M11_3 <- lmer(emissions ~ SHRNHB*Log_PC1 + SHRHSP*Log_PC1 + prop_other_race_all*Log_PC1 + -->
+<!--                 SHRNHB*Log_PC2 + SHRHSP*Log_PC2 + prop_other_race_all*Log_PC2 + -->
+<!--                 SHRNHB*Log_PC3 + SHRHSP*Log_PC3 + prop_other_race_all*Log_PC3 + -->
+<!--                 MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density + -->
+<!--                 (1 | STUSAB), REML = F, data = dt2010) -->
+<!-- summary(M11_1) -->
+<!-- summary(M11_2) -->
+<!-- summary(M11_3) -->
+<!-- lattice::dotplot(ranef(M11_1, condVar = TRUE)) -->
+<!-- lattice::dotplot(ranef(M11_2, condVar = TRUE)) -->
+<!-- lattice::dotplot(ranef(M11_3, condVar = TRUE)) -->
+
+<!-- # 2000 # -->
+<!-- M12_1 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all + -->
+<!--               hs_educ + col_educ + POVRAT + prop_manuf + -->
+<!--               (1 | STUSAB), REML = F, data = dt1990) -->
+<!-- M12_2 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all + -->
+<!--               hs_educ + col_educ + POVRAT + prop_manuf + -->
+<!--               (1 | STUSAB), REML = F, data = dt2000) -->
+<!-- M12_3 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all + -->
+<!--               hs_educ + col_educ + POVRAT + prop_manuf + -->
+<!--               (1 | STUSAB), REML = F, data = dt2010) -->
+<!-- summary(M12_1) -->
+<!-- summary(M12_2) -->
+<!-- summary(M12_3) -->
+<!-- lattice::dotplot(ranef(M12_1, condVar = TRUE)) -->
+<!-- lattice::dotplot(ranef(M12_2, condVar = TRUE)) -->
+<!-- lattice::dotplot(ranef(M12_3, condVar = TRUE)) -->
+
+<!-- # 2010 # -->
+<!-- M4_1 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all + -->
+<!--              MDFAMY + hs_educ + col_educ + POVRAT + (1 | STUSAB), -->
+<!--              REML = F, data = dt1990) -->
+<!-- M4_2 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all + -->
+<!--              MDFAMY + hs_educ + col_educ + POVRAT + (1 | STUSAB), -->
+<!--              REML = F, data = dt2000) -->
+<!-- M4_3 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all + -->
+<!--              MDFAMY + hs_educ + col_educ + POVRAT + (1 | STUSAB), -->
+<!--              REML = F, data = dt2010) -->
+<!-- summary(M4_1) -->
+<!-- summary(M4_2) -->
+<!-- summary(M4_3) -->
+<!-- lattice::dotplot(ranef(M4_1, condVar = TRUE)) -->
+<!-- lattice::dotplot(ranef(M4_2, condVar = TRUE)) -->
+<!-- lattice::dotplot(ranef(M4_3, condVar = TRUE)) -->
+
+
+
+
+<!-- ################### -->
+<!-- ## Presentation models -->
+<!-- ################### -->
+
+
+<!-- library(texreg) -->
+<!-- M11 <- lmer(emissions_decrease ~ emissions_1990 + avg_black + avg_hispanic + avg_other + -->
+<!--               black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + -->
+<!--               avg_povrat + avg_manuf + avg_pop_density + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 + -->
+<!--               (1 | STATEFP10), REML = F, data = dt_change1) -->
+<!-- texreg(M11) -->
+
+<!-- M4 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + -->
+<!--              black_change + latino_change + other_change + avg_hs_educ + avg_col_educ + -->
+<!--              (1 | STATEFP10), REML = F, data = dt_change2) -->
+<!-- texreg(M4) -->
+<!-- ### End -->
+<!-- ``` -->

@@ -499,6 +499,10 @@ M16 <- lmer(emissions_decrease ~ avg_log_PC1*other_change + avg_log_PC2*other_ch
 comp.models(paste0("M", 0:16))
 
 # Model 9 seems to be the best out of the above for 1990 to 2000
+texreg(M9)
+
+# Visualizing the state random effects for the best fitting model 
+lattice::dotplot(ranef(M9, condVar = TRUE))
 
 ## Fit models for change 2000 - 2010
 # Assess the significance of controls
@@ -578,6 +582,10 @@ M16 <- lmer(emissions_decrease ~ avg_log_PC1*other_change + avg_log_PC2*other_ch
 comp.models(paste0("M", 0:16))
 
 # Model 14 seems to be the best out of the above for 2000 to 2010
+texreg(M14)
+
+# Visualizing the state random effects for the best fitting model 
+lattice::dotplot(ranef(M14, condVar = TRUE))
 
 ##############################
 ### Cross sectional models ###
@@ -632,7 +640,7 @@ M9 <- lmer(emissions ~ Log_PC1*prop_other_race_all + Log_PC2*prop_other_race_all
 comp.models(paste0("M", 0:9))
 
 # Model 8 seems to be the best for 1990
-summary(M8)
+texreg(M8)
 
 # Visualizing the state random effects for the best fitting model 
 lattice::dotplot(ranef(M8, condVar = TRUE))
@@ -686,6 +694,7 @@ M9 <- lmer(emissions ~ Log_PC1*prop_other_race_all + Log_PC2*prop_other_race_all
 comp.models(paste0("M", 0:9))
 
 # Model 1 seems to be the best for 2000
+texreg(M1)
 
 # Visualizing the state random effects for the best fitting model 
 lattice::dotplot(ranef(M1, condVar = TRUE))
@@ -740,6 +749,7 @@ M9 <- lmer(emissions ~ Log_PC1*prop_other_race_all + Log_PC2*prop_other_race_all
 comp.models(paste0("M", 0:9))
 
 # Model 2 seems to be the best for 2010
+texreg(M2)
 
 # Visualizing the state random effects for the best fitting model 
 lattice::dotplot(ranef(M2, condVar = TRUE))
