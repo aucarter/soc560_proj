@@ -435,7 +435,9 @@ Wilson, William J. 1987. The Truly Disadvantaged: The Inner City, the Underclass
 
 \newpage
 
-## Variable dictionary
+## Appendix 
+
+### Variable dictionary
 
 \begin{table}[htpb]
 \centering
@@ -487,7 +489,17 @@ STUSAB                              & State Abbreviations
 \end{tabular}
 \end{table}
 
+### Maps of Seattle TRI Emissions 1990 - 2010
 
+![1990 TRI Average Relative Tract Emissions](C:/Users/aucarter/Repos/soc560_proj/images/maps/1990.png)
+
+
+
+![2000 TRI Average Relative Tract Emissions](C:/Users/aucarter/Repos/soc560_proj/images/maps/2000.png)
+
+
+
+![2010 TRI Average Relative Tract Emissions](C:/Users/aucarter/Repos/soc560_proj/images/maps/2010.png)
 
 <!-- ```{r raw emissions, echo = F} -->
 <!-- ############################################## -->
