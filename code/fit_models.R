@@ -577,6 +577,8 @@ M16 <- lmer(emissions_decrease ~ avg_log_PC1*other_change + avg_log_PC2*other_ch
 
 comp.models(paste0("M", 0:16))
 
+# Model 14 seems to be the best out of the above for 2000 to 2010
+
 ##############################
 ### Cross sectional models ###
 ##############################
@@ -740,7 +742,7 @@ comp.models(paste0("M", 0:9))
 # Model 2 seems to be the best for 2010
 
 # Visualizing the state random effects for the best fitting model 
-lattice::dotplot(ranef(M1, condVar = TRUE))
+lattice::dotplot(ranef(M2, condVar = TRUE))
 
 ### Year Comparisons ###
 # 1990 #
