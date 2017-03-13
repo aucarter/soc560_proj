@@ -309,11 +309,14 @@ M8 <- lmer(emissions ~ Log_PC1*SHRHSP + Log_PC2*SHRHSP+ Log_PC3*SHRHSP +
 M9 <- lmer(emissions ~ Log_PC1*prop_other_race_all + Log_PC2*prop_other_race_all + Log_PC3*prop_other_race_all +
            hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990)
 
-comp.models(paste0("M", 0:9))
-
+# comp.models(paste0("M", 0:9))
 # Model 8 seems to be the best for 1990
-print(texreg(M8), comment = F)
+```
 
+
+texreg(M8)
+
+```{r, echo = F}
 # Visualizing the state random effects for the best fitting model
 lattice::dotplot(ranef(M8, condVar = TRUE))
 ```
@@ -379,6 +382,8 @@ Szasz, A. and M. Meuser (1997). "Environmental Inequalities: Literature Review a
 TRI. "Toxics Release Inventory (TRI) Program." (https://www.epa.gov/toxics-release-inventory-tri-program).
 
 Wilson, William J. 1987. The Truly Disadvantaged: The Inner City, the Underclass, and Public Policy. University of Chicago Press.
+
+\newpage
 
 ## Variable dictionary
 
