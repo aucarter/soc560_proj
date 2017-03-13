@@ -155,15 +155,15 @@ dt2010 <- dt2010 %>%
 ## Summarize data
 state.means.1990 <- dt1990 %>% group_by(STATEFP10) %>% summarize_all(funs(mean, sd))
 county.means.1990 <- dt1990 %>% group_by(COUNTYFP10) %>% summarize_all(funs(mean, sd))
-tract.means.1990 <- dt1990 %>% group_by(TRACTCE10) %>% summarize_all(funs(mean, sd))
+#tract.means.1990 <- dt1990 %>% group_by(TRACTCE10) %>% summarize_all(funs(mean, sd))
 
 state.means.2000 <- dt2000 %>% group_by(STATEFP10) %>% summarize_all(funs(mean, sd))
 county.means.2000 <- dt2000 %>% group_by(COUNTYFP10) %>% summarize_all(funs(mean, sd))
-tract.means.2000 <- dt2000 %>% group_by(TRACTCE10) %>% summarize_all(funs(mean, sd))
+#tract.means.2000 <- dt2000 %>% group_by(TRACTCE10) %>% summarize_all(funs(mean, sd))
 
 state.means.2010 <- dt2010 %>% group_by(STATEFP10) %>% summarize_all(funs(mean, sd))
 county.means.2010 <- dt2010 %>% group_by(COUNTYFP10) %>% summarize_all(funs(mean, sd))
-tract.means.2010 <- dt2010 %>% group_by(TRACTCE10) %>% summarize_all(funs(mean, sd))
+#tract.means.2010 <- dt2010 %>% group_by(TRACTCE10) %>% summarize_all(funs(mean, sd))
 
 ##############################################
 ## Plotting the state-ordered raw emissions ##
@@ -623,7 +623,7 @@ M7 <- lmer(emissions ~ Log_PC1*SHRNHW + Log_PC2*SHRNHW + Log_PC3*SHRNHW +
 
 # Hispanic and PCA interaction
 M8 <- lmer(emissions ~ Log_PC1*SHRHSP + Log_PC2*SHRHSP+ Log_PC3*SHRHSP +
-           hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990)
+           hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STUSAB), REML = F, data = dt1990)
 
 # Other and PCA interaction
 M9 <- lmer(emissions ~ Log_PC1*prop_other_race_all + Log_PC2*prop_other_race_all + Log_PC3*prop_other_race_all +
@@ -650,7 +650,7 @@ imageplot.bma(test4)
 M0 <- lm(emissions ~ hs_educ + col_educ + POVRAT + prop_manuf, data = dt2000)
 
 # Baseline (Random intercepts)
-M1 <- lmer(emissions ~ hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2000)
+M1 <- lmer(emissions ~ hs_educ + col_educ + POVRAT + prop_manuf + (1 | STUSAB), REML = F, data = dt2000)
 
 # Race
 M2 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
@@ -708,7 +708,7 @@ M1 <- lmer(emissions ~ MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + (1 | 
 
 # Race
 M2 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-           MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2010)
+           MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + (1 | STUSAB), REML = F, data = dt2010)
 # PCA
 M3 <- lmer(emissions ~ Log_PC1 + Log_PC2 + Log_PC3 +
            MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2010)
