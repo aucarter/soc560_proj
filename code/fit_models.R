@@ -13,7 +13,7 @@ user <- Sys.getenv("USERNAME")
 options(scipen = 999)
 
 ## Packages
-library(data.table);library(ggplot2);library(lme4);library(dplyr)
+library(data.table);library(ggplot2);library(lme4);library(dplyr);library(BMA)
 
 ### Paths
 root <- ifelse(user == "aucarter","C:/Users/aucarter/Repos/soc560_proj/", "~/Desktop/University of Washington/Coursework/Winter 2017/SOC 560 Hierarchical Modeling for the Social Sciences/Project/soc560_proj/")
@@ -417,270 +417,330 @@ text(6, -1.6, labels = "DC, WY, NC", col = "purple")
 text(43, 1.4, labels = "GA, UT, MI", col = "purple")
 
 
+#####################
+### Change models ###
+#####################
 
 ## Fit models for change 1990 - 2000
-M1 <- lmer(emissions_decrease ~ emissions_1990 + avg_black + avg_hispanic + avg_other + 
-             (1 | STATEFP10), REML = F, data = dt_change1)
-M2 <- lmer(emissions_decrease ~ emissions_1990 + avg_black + avg_hispanic + avg_other + 
-             black_change + latino_change + other_change + (1 | STATEFP10), REML = F, data = dt_change1)
-M3 <- lmer(emissions_decrease ~ emissions_1990 + avg_black + avg_hispanic + avg_other + 
-             black_change + latino_change + other_change + avg_income + 
-             (1 | STATEFP10), REML = F, data = dt_change1)
-M4 <- lmer(emissions_decrease ~ emissions_1990 + avg_black + avg_hispanic + avg_other + 
-             black_change + latino_change + other_change + avg_hs_educ + avg_col_educ + 
-             (1 | STATEFP10), REML = F, data = dt_change1)
-M5 <- lmer(emissions_decrease ~ emissions_1990 + avg_black + avg_hispanic + avg_other + 
-             black_change + latino_change + other_change + avg_income + avg_hs_educ + avg_col_educ + 
-             (1 | STATEFP10), REML = F, data = dt_change1)
-M6 <- lmer(emissions_decrease ~ emissions_1990 + avg_black + avg_hispanic + avg_other + 
-             black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
-             avg_povrat + (1 | STATEFP10), REML = F, data = dt_change1)
-M7 <- lmer(emissions_decrease ~ emissions_1990 + avg_black + avg_hispanic + avg_other + 
-             black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
-             avg_povrat + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1)
-M8 <- lmer(emissions_decrease ~ emissions_1990 + avg_black + avg_hispanic + avg_other + 
-             black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
-             avg_povrat + avg_manuf + avg_pop_density + (1 | STATEFP10), REML = F, data = dt_change1)
-M9 <- lmer(emissions_decrease ~ emissions_1990 + avg_black + avg_hispanic + avg_other + 
-             black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
-             avg_povrat + avg_manuf + avg_pop_density + avg_PC1 + avg_PC2 + avg_PC3 + 
-             (1 | STATEFP10), REML = F, data = dt_change1)
-M10 <- lmer(emissions_decrease ~ emissions_1990 + avg_black + avg_hispanic + avg_other + 
-             black_change + latino_change + other_change + avg_income  + avg_hs_educ + avg_col_educ + 
-             avg_povrat + avg_manuf + avg_pop_density + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 + 
-             (1 | STATEFP10), REML = F, data = dt_change1)
-M11 <- lmer(emissions_decrease ~ emissions_1990 + avg_black + avg_hispanic + avg_other + 
-              black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
-              avg_povrat + avg_manuf + avg_pop_density + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 + 
-              (1 | STATEFP10), REML = F, data = dt_change1)
-M12 <- lmer(emissions_decrease ~ emissions_1990 + avg_black + avg_hispanic + avg_other + 
-              black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
-              avg_povrat + avg_manuf + avg_pop_density + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 + 
-              (1 + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 | STATEFP10), REML = F, data = dt_change1)
-M13 <- lmer(emissions_decrease ~ emissions_1990 + avg_black + avg_hispanic + avg_other + 
-              black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
-              avg_povrat + avg_manuf + avg_pop_density +
-               (1 | STATEFP10), REML = F, data = dt_change1)
-M14 <- lmer(emissions_decrease ~ emissions_1990 + avg_black + avg_hispanic + avg_other + 
-              black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
-              avg_povrat + avg_manuf + avg_pop_density + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 + 
-              (1 | STATEFP10/TRACTCE10), REML = F, data = dt_change1)
+# Assess the significance of controls
+dt1 <- as.data.table(dt_change1)
+controls.list <- c("emissions_1990", "avg_povrat", "avg_income", "avg_hs_educ", "avg_col_educ", "avg_manuf", "avg_pop_density")
+test <- bic.glm(dt1[, controls.list, with = F], dt1$emissions_decrease, glm.family = gaussian)
+par(mfrow = c(1,1), oma = c(0,3,0,0))
+imageplot.bma(test)
+# Should include emissions_1990, povrat, hs_educ, avg_manuf in all models
 
-model.list <- c("M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", 
-                "M9", "M10", "M11", "M12", "M13", "M14")
-comp.models(model.list)
+# Baseline (No random intercepts)
+M0 <- lm(emissions_decrease ~ emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf, data = dt_change1)
 
-# Model 11 seems to be the best out of the above for 1990 to 2000
+# Baseline (Random intercepts)
+M1 <- lmer(emissions_decrease ~ emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1)
 
+# Average race
+M2 <- lmer(emissions_decrease ~ avg_black + avg_hispanic + avg_other + 
+           emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# Change race
+M3 <- lmer(emissions_decrease ~ black_change + latino_change + other_change +
+           emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# Average and change race
+M4 <- lmer(emissions_decrease ~ avg_black + avg_hispanic + avg_other + black_change + latino_change + other_change +
+           emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# PCA
+M5 <- lmer(emissions_decrease ~ avg_log_PC1 + avg_log_PC2 + avg_log_PC3 +
+           emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# Average and change in race with PCA
+M6 <- lmer(emissions_decrease ~ avg_black + avg_hispanic + avg_other + black_change + latino_change + other_change + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 +
+           emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# PCA with average race interaction
+M7 <- lmer(emissions_decrease ~ avg_log_PC1*avg_black + avg_log_PC2*avg_black + avg_log_PC3*avg_black + avg_log_PC1*avg_hispanic + avg_log_PC2*avg_hispanic + avg_log_PC3*avg_hispanic + avg_log_PC1*avg_other + avg_log_PC2*avg_other + avg_log_PC3*avg_other +
+           emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# PCA with black interaction
+M8 <- lmer(emissions_decrease ~ avg_log_PC1*avg_black + avg_log_PC2*avg_black + avg_log_PC3*avg_black + 
+           emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# PCA with white interaction
+M9 <- lmer(emissions_decrease ~ avg_log_PC1*avg_white + avg_log_PC2*avg_white + avg_log_PC3*avg_white + 
+           emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# PCA with hispanic interaction
+M10 <- lmer(emissions_decrease ~ avg_log_PC1*avg_hispanic + avg_log_PC2*avg_hispanic + avg_log_PC3*avg_hispanic +
+           emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# PCA with other interaction
+M11 <- lmer(emissions_decrease ~ avg_log_PC1*avg_other + avg_log_PC2*avg_other + avg_log_PC3*avg_other +
+           emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# PCA with race change interaction
+M12 <- lmer(emissions_decrease ~ avg_log_PC1*black_change + avg_log_PC2*black_change + avg_log_PC3*black_change + avg_log_PC1*latino_change + avg_log_PC2*latino_change + avg_log_PC3*latino_change + avg_log_PC1*other_change + avg_log_PC2*other_change + avg_log_PC3*other_change +
+           emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# PCA with black change interaction
+M13 <- lmer(emissions_decrease ~ avg_log_PC1*black_change + avg_log_PC2*black_change + avg_log_PC3*black_change + 
+           emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# PCA with white change interaction
+M14 <- lmer(emissions_decrease ~ avg_log_PC1*white_change + avg_log_PC2*white_change + avg_log_PC3*white_change + 
+           emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# PCA with hispanic change interaction
+M15 <- lmer(emissions_decrease ~ avg_log_PC1*latino_change + avg_log_PC2*latino_change + avg_log_PC3*latino_change + 
+           emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# PCA with other change interaction
+M16 <- lmer(emissions_decrease ~ avg_log_PC1*other_change + avg_log_PC2*other_change + avg_log_PC3*other_change + 
+           emissions_1990 + avg_povrat + avg_hs_educ + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change1)
+
+comp.models(paste0("M", 0:16))
+
+# Model 9 seems to be the best out of the above for 1990 to 2000
 
 ## Fit models for change 2000 - 2010
-M0 <- lmer(emissions_decrease ~ emissions_2000  + 
-             (1 | STATEFP10), REML = F, data = dt_change2)
-M1 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
-             (1 | STATEFP10), REML = F, data = dt_change2)
-M2 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
-             black_change + latino_change + other_change + (1 | STATEFP10), REML = F, data = dt_change2)
-M3 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
-             black_change + latino_change + other_change + avg_income + 
-             (1 | STATEFP10), REML = F, data = dt_change2)
-M4 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
-             black_change + latino_change + other_change + avg_hs_educ + avg_col_educ + 
-             (1 | STATEFP10), REML = F, data = dt_change2)
-M5 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
-             black_change + latino_change + other_change + avg_income + avg_hs_educ + avg_col_educ + 
-             (1 | STATEFP10), REML = F, data = dt_change2)
-M6 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
-             black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
-             avg_povrat + (1 | STATEFP10), REML = F, data = dt_change2)
-M7 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
-             black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
-             avg_povrat + avg_manuf + (1 | STATEFP10), REML = F, data = dt_change2)
-M8 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
-             black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
-             avg_povrat + avg_manuf + avg_pop_density + (1 | STATEFP10), REML = F, data = dt_change2)
-M9 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
-             black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
-             avg_povrat + avg_manuf + avg_pop_density + avg_PC1 + avg_PC2 + avg_PC3 + 
-             (1 | STATEFP10), REML = F, data = dt_change2)
-M10 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
-              black_change + latino_change + other_change + avg_income  + avg_hs_educ + avg_col_educ + 
-              avg_povrat + avg_manuf + avg_pop_density + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 + 
-              (1 | STATEFP10), REML = F, data = dt_change2)
-M11 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
-              black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
-              avg_povrat + avg_manuf + avg_pop_density + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 + 
-              (1 | STATEFP10), REML = F, data = dt_change2)
-M12 <- lmer(emissions_decrease ~ emissions_2000 + avg_black + avg_hispanic + avg_other + 
-              black_change + latino_change + other_change  + avg_hs_educ + avg_col_educ + 
-              avg_povrat + avg_manuf + avg_pop_density + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 + 
-              (1 + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 | STATEFP10), REML = F, data = dt_change2)
-M13 <- lmer(emissions_decrease ~ emissions_2000  + black_change + latino_change + other_change +
-              (1 | STATEFP10), REML = F, data = dt_change2)
-M14 <- lmer(emissions_decrease ~ emissions_2000  + avg_income + 
-              (1 | STATEFP10), REML = F, data = dt_change2)
-M15 <- lmer(emissions_decrease ~ emissions_2000  + avg_income + avg_hs_educ + avg_col_educ  +
-              (1 | STATEFP10), REML = F, data = dt_change2)
-M16 <- lmer(emissions_decrease ~ emissions_2000  + avg_income + avg_hs_educ  +
-              (1 | STATEFP10), REML = F, data = dt_change2)
-M17 <- lmer(emissions_decrease ~ emissions_2000  + avg_income + avg_col_educ  +
-              (1 | STATEFP10), REML = F, data = dt_change2)
-M18 <- lmer(emissions_decrease ~ emissions_2000  + avg_income + avg_col_educ + avg_povrat +
-              (1 | STATEFP10), REML = F, data = dt_change2)
-M19 <- lmer(emissions_decrease ~ emissions_2000  + avg_income + avg_col_educ + avg_manuf +
-              (1 | STATEFP10), REML = F, data = dt_change2)
-M20 <- lmer(emissions_decrease ~ emissions_2000  + avg_income + avg_col_educ + avg_pop_density +
-              (1 | STATEFP10), REML = F, data = dt_change2)
-M21 <- lmer(emissions_decrease ~ emissions_2000  + avg_income + avg_col_educ +
-              avg_log_PC1 + avg_log_PC2 + avg_log_PC3 +
-              (1 | STATEFP10), REML = F, data = dt_change2)
+# Assess the significance of controls
+dt2 <- as.data.table(dt_change2)
+controls.list <- c("emissions_2000", "avg_povrat", "avg_income", "avg_hs_educ", "avg_col_educ", "avg_manuf", "avg_pop_density")
+test2 <- bic.glm(dt2[, controls.list, with = F], dt2$emissions_decrease, glm.family = gaussian)
+par(mfrow = c(1,1), oma = c(0,3,0,0))
+imageplot.bma(test2)
+# Should include emissions_2000, avg_hs_educ, avg_col_educ in all models
 
-model.list <- c("M0", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", 
-                "M9", "M10", "M11", "M12", "M13", "M14", "M15", "M16", 
-                "M17", "M18", "M19", "M20", "M21")
-comp.models(model.list)
+# Baseline (No random intercepts)
+M0 <- lm(emissions_decrease ~ emissions_2000 + avg_hs_educ + avg_col_educ, data = dt_change1)
 
-# Model 17 seems to be the best out of the above for 2000 to 2010
+# Baseline (Random intercepts)
+M1 <- lmer(emissions_decrease ~ emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# Average race
+M2 <- lmer(emissions_decrease ~ avg_black + avg_hispanic + avg_other + 
+           emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# Change race
+M3 <- lmer(emissions_decrease ~ black_change + latino_change + other_change +
+           emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# Average and change race
+M4 <- lmer(emissions_decrease ~ avg_black + avg_hispanic + avg_other + black_change + latino_change + other_change +
+           emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# PCA
+M5 <- lmer(emissions_decrease ~ avg_log_PC1 + avg_log_PC2 + avg_log_PC3 +
+           emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# Average and change in race with PCA
+M6 <- lmer(emissions_decrease ~ avg_black + avg_hispanic + avg_other + black_change + latino_change + other_change + avg_log_PC1 + avg_log_PC2 + avg_log_PC3 +
+           emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# PCA with average race interaction
+M7 <- lmer(emissions_decrease ~ avg_log_PC1*avg_black + avg_log_PC2*avg_black + avg_log_PC3*avg_black + avg_log_PC1*avg_hispanic + avg_log_PC2*avg_hispanic + avg_log_PC3*avg_hispanic + avg_log_PC1*avg_other + avg_log_PC2*avg_other + avg_log_PC3*avg_other +
+           emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# PCA with black interaction
+M8 <- lmer(emissions_decrease ~ avg_log_PC1*avg_black + avg_log_PC2*avg_black + avg_log_PC3*avg_black + 
+           emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# PCA with white interaction
+M9 <- lmer(emissions_decrease ~ avg_log_PC1*avg_white + avg_log_PC2*avg_white + avg_log_PC3*avg_white + 
+           emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# PCA with hispanic interaction
+M10 <- lmer(emissions_decrease ~ avg_log_PC1*avg_hispanic + avg_log_PC2*avg_hispanic + avg_log_PC3*avg_hispanic +
+           emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# PCA with other interaction
+M11 <- lmer(emissions_decrease ~ avg_log_PC1*avg_other + avg_log_PC2*avg_other + avg_log_PC3*avg_other +
+           emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# PCA with race change interaction
+M12 <- lmer(emissions_decrease ~ avg_log_PC1*black_change + avg_log_PC2*black_change + avg_log_PC3*black_change + avg_log_PC1*latino_change + avg_log_PC2*latino_change + avg_log_PC3*latino_change + avg_log_PC1*other_change + avg_log_PC2*other_change + avg_log_PC3*other_change +
+           emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# PCA with black change interaction
+M13 <- lmer(emissions_decrease ~ avg_log_PC1*black_change + avg_log_PC2*black_change + avg_log_PC3*black_change + 
+           emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# PCA with white change interaction
+M14 <- lmer(emissions_decrease ~ avg_log_PC1*white_change + avg_log_PC2*white_change + avg_log_PC3*white_change + 
+           emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# PCA with hispanic change interaction
+M15 <- lmer(emissions_decrease ~ avg_log_PC1*latino_change + avg_log_PC2*latino_change + avg_log_PC3*latino_change + 
+           emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1)
+
+# PCA with other change interaction
+M16 <- lmer(emissions_decrease ~ avg_log_PC1*other_change + avg_log_PC2*other_change + avg_log_PC3*other_change + 
+           emissions_2000 + avg_hs_educ + avg_col_educ + (1 | STATEFP10), REML = F, data = dt_change1)
+
+comp.models(paste0("M", 0:16))
 
 ##############################
 ### Cross sectional models ###
 ##############################
 
 ### 1990 ###
+# Assess the significance of controls
+dt90 <- as.data.table(dt1990)
+controls.list <- c("MDFAMY", "hs_educ", "col_educ", "POVRAT", "prop_manuf", "pop_density")
+test3 <- bic.glm(dt90[, controls.list, with = F], dt90$emissions, glm.family = gaussian)
+par(mfrow = c(1,1), oma = c(0,3,0,0))
+imageplot.bma(test3)
+# Should include "hs_educ", "col_educ", "POVRAT", "prop_manuf", "pop_density" in all models
 
-M1 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all + 
-             (1 | STATEFP10), REML = F, data = dt1990)
+# Baseline (No random intercepts)
+M0 <- lm(emissions ~ hs_educ + col_educ + POVRAT + prop_manuf + pop_density, data = dt1990)
+
+# Baseline (Random intercepts)
+M1 <- lmer(emissions ~ hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990)
+
+# Race
 M2 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + (1 | STATEFP10), REML = F, data = dt1990)
-M3 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + (1 | STATEFP10), REML = F, data = dt1990)
-M4 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + POVRAT + (1 | STATEFP10), REML = F, data = dt1990)
-M5 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + 
-             (1 | STATEFP10), REML = F, data = dt1990)
-M6 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
-             (1 | STATEFP10), REML = F, data = dt1990)
-M7 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
-             PC1 + PC2 + PC3 + (1 | STATEFP10), REML = F, data = dt1990)
-M8 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
-             PC1 + PC2 + PC3 + (1 + PC1 + PC2 + PC3 | STATEFP10), REML = F, data = dt1990)
-M9 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
-             Log_PC1 + Log_PC2 + Log_PC3 + (1 | STATEFP10), REML = F, data = dt1990)
-M10 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
-             Log_PC1 + Log_PC2 + Log_PC3 + (1 + Log_PC1 + Log_PC2 + Log_PC3| STATEFP10), 
-            REML = F, data = dt1990)
-M11 <- lmer(emissions ~ SHRNHB*Log_PC1 + SHRHSP*Log_PC1 + prop_other_race_all*Log_PC1 + 
-              SHRNHB*Log_PC2 + SHRHSP*Log_PC2 + prop_other_race_all*Log_PC2 + 
-              SHRNHB*Log_PC3 + SHRHSP*Log_PC3 + prop_other_race_all*Log_PC3 +
-             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
-               (1 | STUSAB), REML = F, data = dt1990)
-model.list <- c("M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", 
-                "M9", "M10", "M11")
-comp.models(model.list)
+           hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990)
+# PCA
+M3 <- lmer(emissions ~ Log_PC1 + Log_PC2 + Log_PC3 +
+           hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990)
 
-# Model 11 seems to be the best for 1990
-summary(M11)
+# Race and PCA
+M4 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all + Log_PC1 + Log_PC2 + Log_PC3 +
+           hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990)
+
+# Race and PCA interaction
+M5 <- lmer(emissions ~ Log_PC1*SHRNHB + Log_PC2*SHRNHB + Log_PC3*SHRNHB + Log_PC1*SHRHSP + Log_PC2*SHRHSP+ Log_PC3*SHRHSP + Log_PC1*prop_other_race_all + Log_PC2*prop_other_race_all + Log_PC3*prop_other_race_all +
+           hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990)
+
+# Black and PCA interaction
+M6 <- lmer(emissions ~ Log_PC1*SHRNHB + Log_PC2*SHRNHB + Log_PC3*SHRNHB +
+           hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990)
+
+# White and PCA interaction
+M7 <- lmer(emissions ~ Log_PC1*SHRNHW + Log_PC2*SHRNHW + Log_PC3*SHRNHW +
+           hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990)
+
+# Hispanic and PCA interaction
+M8 <- lmer(emissions ~ Log_PC1*SHRHSP + Log_PC2*SHRHSP+ Log_PC3*SHRHSP +
+           hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990)
+
+# Other and PCA interaction
+M9 <- lmer(emissions ~ Log_PC1*prop_other_race_all + Log_PC2*prop_other_race_all + Log_PC3*prop_other_race_all +
+           hs_educ + col_educ + POVRAT + prop_manuf + pop_density + (1 | STATEFP10), REML = F, data = dt1990)
+
+comp.models(paste0("M", 0:9))
+
+# Model 8 seems to be the best for 1990
+summary(M8)
 
 # Visualizing the state random effects for the best fitting model 
-lattice::dotplot(ranef(M11, condVar = TRUE))
+lattice::dotplot(ranef(M8, condVar = TRUE))
 
 ### 2000 ###
-M1 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all + 
-             (1 | STATEFP10), REML = F, data = dt2000)
+# Assess the significance of controls
+dt00 <- as.data.table(dt2000)
+controls.list <- c("MDFAMY", "hs_educ", "col_educ", "POVRAT", "prop_manuf", "pop_density")
+test4 <- bic.glm(dt00[, controls.list, with = F], dt00$emissions, glm.family = gaussian)
+par(mfrow = c(1,1), oma = c(0,3,0,0))
+imageplot.bma(test4)
+# Should include "hs_educ", "col_educ", "POVRAT", "prop_manuf" in all models
+
+# Baseline (No random intercepts)
+M0 <- lm(emissions ~ hs_educ + col_educ + POVRAT + prop_manuf, data = dt2000)
+
+# Baseline (Random intercepts)
+M1 <- lmer(emissions ~ hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2000)
+
+# Race
 M2 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + (1 | STATEFP10), REML = F, data = dt2000)
-M3 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + (1 | STATEFP10), REML = F, data = dt2000)
-M4 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + POVRAT + (1 | STATEFP10), REML = F, data = dt2000)
-M5 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + 
-             (1 | STATEFP10), REML = F, data = dt2000)
-M6 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
-             (1 | STATEFP10), REML = F, data = dt2000)
-M7 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
-             PC1 + PC2 + PC3 + (1 | STATEFP10), REML = F, data = dt2000)
-M8 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
-             PC1 + PC2 + PC3 + (1 + PC1 + PC2 + PC3 | STATEFP10), REML = F, data = dt2000)
-M9 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
-             Log_PC1 + Log_PC2 + Log_PC3 + (1 | STATEFP10), REML = F, data = dt2000)
-M10 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-              MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
-              Log_PC1 + Log_PC2 + Log_PC3 + (1 + Log_PC1 + Log_PC2 + Log_PC3| STATEFP10), 
-            REML = F, data = dt2000)
-M11 <- lmer(emissions ~ SHRNHB*Log_PC1 + SHRHSP*Log_PC1 + prop_other_race_all*Log_PC1 + 
-              SHRNHB*Log_PC2 + SHRHSP*Log_PC2 + prop_other_race_all*Log_PC2 + 
-              SHRNHB*Log_PC3 + SHRHSP*Log_PC3 + prop_other_race_all*Log_PC3 +
-              MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
-              (1 | STUSAB), REML = F, data = dt2000)
-M12 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-               hs_educ + col_educ + POVRAT + prop_manuf + 
-              (1 | STUSAB), REML = F, data = dt2000)
+           hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2000)
+# PCA
+M3 <- lmer(emissions ~ Log_PC1 + Log_PC2 + Log_PC3 +
+           hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2000)
 
-model.list <- c("M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", 
-                "M9", "M10", "M11", "M12")
-comp.models(model.list)
+# Race and PCA
+M4 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all + Log_PC1 + Log_PC2 + Log_PC3 +
+           hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2000)
 
-# Model 12 seems to be the best for 2000
-summary(M12)
+# Race and PCA interaction
+M5 <- lmer(emissions ~ Log_PC1*SHRNHB + Log_PC2*SHRNHB + Log_PC3*SHRNHB + Log_PC1*SHRHSP + Log_PC2*SHRHSP+ Log_PC3*SHRHSP + Log_PC1*prop_other_race_all + Log_PC2*prop_other_race_all + Log_PC3*prop_other_race_all +
+           hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2000)
+
+# Black and PCA interaction
+M6 <- lmer(emissions ~ Log_PC1*SHRNHB + Log_PC2*SHRNHB + Log_PC3*SHRNHB +
+           hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2000)
+
+# White and PCA interaction
+M7 <- lmer(emissions ~ Log_PC1*SHRNHW + Log_PC2*SHRNHW + Log_PC3*SHRNHW +
+           hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2000)
+
+# Hispanic and PCA interaction
+M8 <- lmer(emissions ~ Log_PC1*SHRHSP + Log_PC2*SHRHSP+ Log_PC3*SHRHSP +
+           hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2000)
+
+# Other and PCA interaction
+M9 <- lmer(emissions ~ Log_PC1*prop_other_race_all + Log_PC2*prop_other_race_all + Log_PC3*prop_other_race_all +
+           hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2000)
+
+comp.models(paste0("M", 0:9))
+
+# Model 1 seems to be the best for 2000
 
 # Visualizing the state random effects for the best fitting model 
-lattice::dotplot(ranef(M12, condVar = TRUE))
+lattice::dotplot(ranef(M1, condVar = TRUE))
 
 
 ### 2010 ###
-M1 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all + 
-             (1 | STATEFP10), REML = F, data = dt2010)
+# Assess the significance of controls
+dt10 <- as.data.table(dt2010)
+controls.list <- c("MDFAMY", "hs_educ", "col_educ", "POVRAT", "prop_manuf", "pop_density")
+test5 <- bic.glm(dt10[, controls.list, with = F], dt10$emissions, glm.family = gaussian)
+par(mfrow = c(1,1), oma = c(0,3,0,3))
+imageplot.bma(test5)
+# Should include "hs_educ", "col_educ", "POVRAT", "prop_manuf" in all models
+
+# Baseline (No random intercepts)
+M0 <- lm(emissions ~ MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf, data = dt2010)
+
+# Baseline (Random intercepts)
+M1 <- lmer(emissions ~ MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2010)
+
+# Race
 M2 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + (1 | STATEFP10), REML = F, data = dt2010)
-M3 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + (1 | STATEFP10), REML = F, data = dt2010)
-M4 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + POVRAT + (1 | STUSAB), REML = F, data = dt2010)
-M5 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + 
-             (1 | STATEFP10), REML = F, data = dt2010)
-M6 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
-             (1 | STATEFP10), REML = F, data = dt2010)
-M7 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
-             PC1 + PC2 + PC3 + (1 | STATEFP10), REML = F, data = dt2010)
-M8 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
-             PC1 + PC2 + PC3 + (1 + PC1 + PC2 + PC3 | STATEFP10), REML = F, data = dt2010)
-M9 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-             MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
-             Log_PC1 + Log_PC2 + Log_PC3 + (1 | STATEFP10), REML = F, data = dt2010)
-M10 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all +
-              MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
-              Log_PC1 + Log_PC2 + Log_PC3 + (1 + Log_PC1 + Log_PC2 + Log_PC3| STATEFP10), 
-            REML = F, data = dt2010)
-M11 <- lmer(emissions ~ SHRNHB*Log_PC1 + SHRHSP*Log_PC1 + prop_other_race_all*Log_PC1 + 
-              SHRNHB*Log_PC2 + SHRHSP*Log_PC2 + prop_other_race_all*Log_PC2 + 
-              SHRNHB*Log_PC3 + SHRHSP*Log_PC3 + prop_other_race_all*Log_PC3 +
-              MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + pop_density +
-              (1 | STUSAB), REML = F, data = dt2010)
+           MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2010)
+# PCA
+M3 <- lmer(emissions ~ Log_PC1 + Log_PC2 + Log_PC3 +
+           MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2010)
 
-model.list <- c("M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", 
-                "M9", "M10", "M11")
-comp.models(model.list)
+# Race and PCA
+M4 <- lmer(emissions ~ SHRNHB + SHRHSP + prop_other_race_all + Log_PC1 + Log_PC2 + Log_PC3 +
+           MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2010)
 
-# Model 4 seems to be the best for 2010
-summary(M4)
+# Race and PCA interaction
+M5 <- lmer(emissions ~ Log_PC1*SHRNHB + Log_PC2*SHRNHB + Log_PC3*SHRNHB + Log_PC1*SHRHSP + Log_PC2*SHRHSP+ Log_PC3*SHRHSP + Log_PC1*prop_other_race_all + Log_PC2*prop_other_race_all + Log_PC3*prop_other_race_all +
+           MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2010)
+
+# Black and PCA interaction
+M6 <- lmer(emissions ~ Log_PC1*SHRNHB + Log_PC2*SHRNHB + Log_PC3*SHRNHB +
+           MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2010)
+
+# White and PCA interaction
+M7 <- lmer(emissions ~ Log_PC1*SHRNHW + Log_PC2*SHRNHW + Log_PC3*SHRNHW +
+           MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2010)
+
+# Hispanic and PCA interaction
+M8 <- lmer(emissions ~ Log_PC1*SHRHSP + Log_PC2*SHRHSP+ Log_PC3*SHRHSP +
+           MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2010)
+
+# Other and PCA interaction
+M9 <- lmer(emissions ~ Log_PC1*prop_other_race_all + Log_PC2*prop_other_race_all + Log_PC3*prop_other_race_all +
+           MDFAMY + hs_educ + col_educ + POVRAT + prop_manuf + (1 | STATEFP10), REML = F, data = dt2010)
+
+comp.models(paste0("M", 0:9))
+
+# Model 2 seems to be the best for 2010
 
 # Visualizing the state random effects for the best fitting model 
-lattice::dotplot(ranef(M4, condVar = TRUE))
-
+lattice::dotplot(ranef(M1, condVar = TRUE))
 
 ### Year Comparisons ###
 # 1990 #
