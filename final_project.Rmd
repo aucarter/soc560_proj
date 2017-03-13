@@ -313,10 +313,60 @@ M9 <- lmer(emissions ~ Log_PC1*prop_other_race_all + Log_PC2*prop_other_race_all
 # Model 8 seems to be the best for 1990
 ```
 
+\begin{table}[htpb]
+\begin{center}
+\begin{tabular}{l c }
+\hline
+ & Model 1 \\
+\hline
+(Intercept)             & $395.22^{***}$   \\
+                        & $(114.86)$       \\
+Log\_PC1                & $54.41$          \\
+                        & $(30.41)$        \\
+SHRHSP                  & $3253.19^{***}$  \\
+                        & $(297.28)$       \\
+Log\_PC2                & $-29.67$         \\
+                        & $(48.16)$        \\
+Log\_PC3                & $-38.88$         \\
+                        & $(49.41)$        \\
+hs\_educ                & $-1676.60^{***}$ \\
+                        & $(185.24)$       \\
+col\_educ               & $-793.60^{***}$  \\
+                        & $(116.47)$       \\
+POVRAT                  & $1437.59^{***}$  \\
+                        & $(105.84)$       \\
+prop\_manuf             & $2009.69^{***}$  \\
+                        & $(131.69)$       \\
+pop\_density            & $-3013.97$       \\
+                        & $(3048.25)$      \\
+Log\_PC1:SHRHSP         & $1332.34^{***}$  \\
+                        & $(108.78)$       \\
+SHRHSP:Log\_PC2         & $1032.17^{***}$  \\
+                        & $(208.03)$       \\
+SHRHSP:Log\_PC3         & $-290.87$        \\
+                        & $(153.78)$       \\
+\hline
+AIC                     & 1341787.30       \\
+BIC                     & 1341925.07       \\
+Log Likelihood          & -670878.65       \\
+Num. obs.               & 72049            \\
+Num. groups: STUSAB     & 48               \\
+Var: STUSAB (Intercept) & 37129.43         \\
+Var: Residual           & 7157866.89       \\
+\hline
+\multicolumn{2}{l}{\scriptsize{$^{***}p<0.001$, $^{**}p<0.01$, $^*p<0.05$}}
+\end{tabular}
+\caption{Statistical models}
+\label{table:coefficients}
+\end{center}
+\end{table}
 
-texreg(M8)
+
 
 ```{r, echo = F}
+
+#texreg(M8)
+
 # Visualizing the state random effects for the best fitting model
 lattice::dotplot(ranef(M8, condVar = TRUE))
 ```
